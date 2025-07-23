@@ -51,13 +51,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="mb-8">
             <Image 
-              src="/san juan.png" 
+              src="/logodiosesis.png" 
               alt="Diócesis de San Juan de los Lagos"
-              width={120}
-              height={120}
+              width={160}
+              height={160}
               quality={100}
               priority={true}
-              className="mx-auto mb-6 h-30 w-30 object-contain logo-crisp"
+              className="mx-auto mb-6 h-40 w-40 object-contain logo-crisp"
               style={{ imageRendering: 'crisp-edges' }}
             />
           </div>
@@ -183,12 +183,12 @@ export default function Home() {
             <div>
               <div className="flex items-center space-x-3 mb-4">
                 <Image 
-                  src="/san juan.png" 
+                  src="/logodiosesis.png" 
                   alt="Diócesis de San Juan de los Lagos"
-                  width={40}
-                  height={40}
+                  width={48}
+                  height={48}
                   quality={100}
-                  className="h-10 w-10 object-contain"
+                  className="h-12 w-12 object-contain"
                   style={{ imageRendering: 'crisp-edges' }}
                 />
                 <h3 className="text-lg font-semibold">Diócesis de San Juan de los Lagos</h3>

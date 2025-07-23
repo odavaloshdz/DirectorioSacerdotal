@@ -104,13 +104,13 @@ export default function Register() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <Image 
-            src="/san juan.png" 
+            src="/logodiosesis.png" 
             alt="Diócesis de San Juan de los Lagos"
-            width={80}
-            height={80}
+            width={100}
+            height={100}
             quality={100}
             priority={true}
-            className="h-20 w-20 object-contain"
+            className="h-24 w-24 object-contain"
             style={{ imageRendering: 'crisp-edges' }}
           />
         </div>

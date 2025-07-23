@@ -20,7 +20,7 @@ export function AuthHeader() {
         <div className="flex justify-between items-center h-20">
           <Link href="/" className="flex items-center space-x-4">
             <Image 
-              src="/san juan.png" 
+              src="/logodiosesis.png" 
               alt="Diócesis de San Juan de los Lagos"
               width={56}
               height={56}

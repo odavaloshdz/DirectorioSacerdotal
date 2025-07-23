@@ -154,7 +154,7 @@ async function seedDatabase() {
     console.log('   📧 Email: cualquier email de los creados arriba')
     console.log('   🔑 Contraseña: password123')
     console.log('\n🔧 Admin:')
-    console.log('   📧 Email: admin@diocesis-sjl.org')
+    console.log('   📧 Email: comunicacion@diocesisdesanjuan.org')
     console.log('   🔑 Contraseña: admin123')
 
   } catch (error) {

@@ -22,7 +22,7 @@ async function createAdmin() {
 
     const admin = await prisma.user.create({
       data: {
-        email: 'admin@diocesis-sjl.org',
+        email: 'comunicacion@diocesisdesanjuan.org',
         password: hashedPassword,
         name: 'Administrador Diocesano',
         role: 'ADMIN'
@@ -30,7 +30,7 @@ async function createAdmin() {
     })
 
     console.log('✅ Administrador creado exitosamente')
-    console.log('📧 Email: admin@diocesis-sjl.org')
+    console.log('📧 Email: comunicacion@diocesisdesanjuan.org')
     console.log('🔑 Contraseña: admin123')
     console.log('⚠️  Por favor, cambie la contraseña después del primer inicio de sesión')
 

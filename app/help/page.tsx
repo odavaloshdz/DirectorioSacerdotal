@@ -118,7 +118,7 @@ export default function HelpPage() {
                   <strong>Acceso total:</strong> Puede aprobar/rechazar registros, ver estadísticas y gestionar todos los usuarios.
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
-                  📧 admin@diocesis-sjl.org | 🔑 admin123
+                  📧 comunicacion@diocesisdesanjuan.org | 🔑 admin123
                 </p>
               </div>
             </div>
@@ -207,19 +207,17 @@ export default function HelpPage() {
           </p>
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="font-medium text-blue-900 mb-2">Sacerdotes de Ejemplo:</p>
+              <p className="font-medium text-blue-900 mb-2">Administrador:</p>
               <ul className="text-blue-700 space-y-1">
-                <li>• P. Juan Carlos Martínez</li>
-                <li>• P. Miguel Ángel Rodríguez</li>
-                <li>• P. Francisco Javier López</li>
-                <li>• Y 3 más...</li>
+                <li>📧 comunicacion@diocesisdesanjuan.org</li>
+                <li>🔑 admin123</li>
               </ul>
             </div>
             <div>
-              <p className="font-medium text-blue-900 mb-2">Credenciales de Prueba:</p>
+              <p className="font-medium text-blue-900 mb-2">Sacerdotes de Ejemplo:</p>
               <ul className="text-blue-700 space-y-1">
-                <li>📧 Email: [cualquier email de ejemplo]</li>
-                <li>🔑 Contraseña: password123</li>
+                <li>📧 [emails de ejemplo]</li>
+                <li>🔑 password123</li>
               </ul>
             </div>
           </div>
@@ -231,10 +229,36 @@ export default function HelpPage() {
           <p className="text-gray-600 mb-6">
             Si tiene problemas técnicos o preguntas sobre el sistema, contacte al administrador diocesano.
           </p>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>📧 admin@diocesis-sjl.org</p>
-            <p>📞 +52 (395) 785-0100</p>
+          <div className="space-y-3 text-sm text-gray-600 mb-6">
+            <p>
+              📧 <a href="mailto:comunicacion@diocesisdesanjuan.org" className="text-blue-600 hover:text-blue-700">
+                comunicacion@diocesisdesanjuan.org
+              </a>
+            </p>
+            <p>
+              📞 <a href="tel:+523957850570" className="text-blue-600 hover:text-blue-700">
+                395 785 0570
+              </a>
+            </p>
             <p>🏢 Palacio Episcopal, San Juan de los Lagos, Jalisco</p>
+          </div>
+          <div className="space-y-2">
+            <a
+              href="https://diocesisdesanjuan.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm mr-3"
+            >
+              🌐 Sitio Web Oficial
+            </a>
+            <a
+              href="https://diocesisdesanjuan.org/?p=202"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition text-sm"
+            >
+              ℹ️ Conoce más sobre nosotros
+            </a>
           </div>
         </div>
       </div>

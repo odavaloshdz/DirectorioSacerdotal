@@ -4,6 +4,8 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserGroupIcon, PhoneIcon, MapPinIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import Image from 'next/image'
+import { calculateOrdinationTime, formatPriestName, getPriestProfileImage, parseSpecialties } from '@/lib/utils'
 
 interface Priest {
   id: string
@@ -12,6 +14,9 @@ interface Priest {
   parish: string | null
   phone: string | null
   specialties: string | null
+  profileImage: string | null
+  ordainedDate: string | null
+  biography: string | null
   user: {
     email: string
   }
@@ -200,20 +205,36 @@ export default function DirectorioPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPriests.map((priest) => (
-              <div
-                key={priest.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => setSelectedPriest(priest)}
-              >
-                <div className="text-center mb-4">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <UserGroupIcon className="h-8 w-8 text-blue-600" />
+            {filteredPriests.map((priest) => {
+              const specialties = parseSpecialties(priest.specialties)
+              const ordinationTime = calculateOrdinationTime(priest.ordainedDate)
+              const profileImage = getPriestProfileImage(priest.profileImage)
+              
+              return (
+                <div
+                  key={priest.id}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setSelectedPriest(priest)}
+                >
+                  <div className="text-center mb-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3">
+                      <Image
+                        src={profileImage}
+                        alt={`${priest.firstName} ${priest.lastName}`}
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {formatPriestName(priest.firstName, priest.lastName)}
+                    </h3>
+                    {priest.ordainedDate && (
+                      <p className="text-sm text-blue-600 font-medium">
+                        {ordinationTime} de ordenación
+                      </p>
+                    )}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    P. {priest.firstName} {priest.lastName}
-                  </h3>
-                </div>
 
                 <div className="space-y-3">
                   {priest.parish && (
@@ -237,11 +258,11 @@ export default function DirectorioPage() {
                     <span className="text-sm truncate">{priest.user.email}</span>
                   </div>
 
-                  {priest.specialties && (
+                  {specialties.length > 0 && (
                     <div className="mt-4">
                       <p className="text-xs text-gray-500 mb-2">Especialidades:</p>
                       <div className="flex flex-wrap gap-1">
-                        {JSON.parse(priest.specialties).slice(0, 2).map((specialty: string, index: number) => (
+                        {specialties.slice(0, 2).map((specialty: string, index: number) => (
                           <span
                             key={index}
                             className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
@@ -249,9 +270,9 @@ export default function DirectorioPage() {
                             {specialty}
                           </span>
                         ))}
-                        {JSON.parse(priest.specialties).length > 2 && (
+                        {specialties.length > 2 && (
                           <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                            +{JSON.parse(priest.specialties).length - 2}
+                            +{specialties.length - 2}
                           </span>
                         )}
                       </div>
@@ -265,7 +286,8 @@ export default function DirectorioPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

@@ -61,4 +61,15 @@ Distribuido bajo la Licencia MIT. Ver `LICENSE` para más información.
 
 ---
 
-Desarrollado con ❤️ para la comunidad católica 
+## 📞 Contacto
+
+**Diócesis de San Juan de los Lagos**
+- 🌐 Website: [diocesisdesanjuan.org](https://diocesisdesanjuan.org)
+- ℹ️ Información: [Conoce más sobre nosotros](https://diocesisdesanjuan.org/?p=202)
+- 📧 Email: comunicacion@diocesisdesanjuan.org
+- 📞 Teléfono: 395 785 0570
+- 🏢 Dirección: Palacio Episcopal, San Juan de los Lagos, Jalisco
+
+---
+
+Desarrollado con ❤️ para la comunidad católica de la Diócesis de San Juan de los Lagos 

@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { UserGroupIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/outline'
 
 export default function Home() {
@@ -28,12 +29,18 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium">
+            <Link
+              href="/auth/signin"
+              className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium text-center"
+            >
               Acceder al Directorio
-            </button>
-            <button className="px-8 py-3 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition font-medium">
+            </Link>
+            <Link
+              href="/auth/register"
+              className="px-8 py-3 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition font-medium text-center"
+            >
               Registro para Sacerdotes
-            </button>
+            </Link>
           </div>
         </div>
       </section>

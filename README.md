@@ -1,6 +1,6 @@
-# Directorio Sacerdotal
+# Directorio Sacerdotal - Diócesis de San Juan de los Lagos
 
-Sistema de gestión y directorio de sacerdotes católicos desarrollado con Next.js y Tailwind CSS.
+Sistema oficial de gestión y directorio de sacerdotes de la Diócesis de San Juan de los Lagos, Jalisco. Desarrollado con Next.js y Tailwind CSS.
 
 ## 🚀 Características
 

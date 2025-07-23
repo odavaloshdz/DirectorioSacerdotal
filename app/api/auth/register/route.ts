@@ -4,7 +4,22 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
   try {
-    const { email, password, firstName, lastName, parish, phone } = await request.json()
+    const { email, password, firstName, lastName, parish, phone, specialties } = await request.json()
+
+    // Validate required fields
+    if (!email || !password || !firstName || !lastName) {
+      return NextResponse.json(
+        { error: 'Faltan campos requeridos' },
+        { status: 400 }
+      )
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'La contraseña debe tener al menos 6 caracteres' },
+        { status: 400 }
+      )
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -27,13 +42,14 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         name: `${firstName} ${lastName}`,
-        role: 'PRIEST',
+        role: 'USER', // Start as USER, will become PRIEST when approved
         priest: {
           create: {
             firstName,
             lastName,
-            parish,
-            phone,
+            parish: parish || null,
+            phone: phone || null,
+            specialties: specialties || null,
             status: 'PENDING'
           }
         }

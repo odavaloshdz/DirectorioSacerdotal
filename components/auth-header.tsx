@@ -63,6 +63,13 @@ export function AuthHeader() {
                   </Link>
                 )}
 
+                <Link
+                  href="/help"
+                  className="px-3 py-2 text-sm text-gray-600 hover:text-gray-700"
+                >
+                  Ayuda
+                </Link>
+
                 <button
                   onClick={handleSignOut}
                   className="px-4 py-2 text-sm text-red-600 hover:text-red-700 border border-red-600 rounded-md hover:bg-red-50 transition"
@@ -72,6 +79,12 @@ export function AuthHeader() {
               </div>
             ) : (
               <>
+                <Link
+                  href="/help"
+                  className="px-3 py-2 text-sm text-gray-600 hover:text-gray-700"
+                >
+                  Ayuda
+                </Link>
                 <Link
                   href="/auth/signin"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm"

@@ -5,6 +5,21 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 
+const availableSpecialties = [
+  'Dirección Espiritual',
+  'Liturgia',
+  'Catequesis',
+  'Juventud',
+  'Matrimonios',
+  'Familia',
+  'Formación',
+  'Misiones',
+  'Pastoral Social',
+  'Educación',
+  'Música Sacra',
+  'Arte Sacro'
+]
+
 export default function Register() {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -13,7 +28,8 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     parish: '',
-    phone: ''
+    phone: '',
+    specialties: [] as string[]
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -25,6 +41,15 @@ export default function Register() {
       ...formData,
       [e.target.name]: e.target.value
     })
+  }
+
+  const handleSpecialtyToggle = (specialty: string) => {
+    setFormData(prev => ({
+      ...prev,
+      specialties: prev.specialties.includes(specialty)
+        ? prev.specialties.filter(s => s !== specialty)
+        : [...prev.specialties, specialty]
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,13 +64,22 @@ export default function Register() {
       return
     }
 
+    if (formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          specialties: JSON.stringify(formData.specialties)
+        })
       })
 
       const data = await response.json()
@@ -103,7 +137,7 @@ export default function Register() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                  Nombre
+                  Nombre *
                 </label>
                 <input
                   id="firstName"
@@ -118,7 +152,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                  Apellidos
+                  Apellidos *
                 </label>
                 <input
                   id="lastName"
@@ -134,7 +168,7 @@ export default function Register() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Correo Electrónico
+                Correo Electrónico *
               </label>
               <input
                 id="email"
@@ -176,9 +210,32 @@ export default function Register() {
               />
             </div>
 
+            {/* Specialties */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Especialidades Pastorales
+              </label>
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-3">
+                {availableSpecialties.map(specialty => (
+                  <label key={specialty} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.specialties.includes(specialty)}
+                      onChange={() => handleSpecialtyToggle(specialty)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-700">{specialty}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Seleccione las áreas en las que se especializa o tiene experiencia
+              </p>
+            </div>
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Contraseña
+                Contraseña *
               </label>
               <input
                 id="password"
@@ -190,11 +247,12 @@ export default function Register() {
                 onChange={handleChange}
                 className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
+              <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
             </div>
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirmar Contraseña
+                Confirmar Contraseña *
               </label>
               <input
                 id="confirmPassword"

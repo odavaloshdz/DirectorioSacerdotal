@@ -7,7 +7,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:reset": "prisma db push --force-reset",
+    "db:studio": "prisma studio",
+    "setup:admin": "node scripts/create-admin.js",
+    "setup:sample": "node scripts/seed-database.js",
+    "setup:all": "npm run db:push && npm run setup:admin && npm run setup:sample"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",

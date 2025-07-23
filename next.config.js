@@ -3,7 +3,6 @@ const nextConfig = {
   // Configuration for production optimization
   images: {
     formats: ['image/webp', 'image/avif'],
-    quality: 100,
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     minimumCacheTTL: 60,

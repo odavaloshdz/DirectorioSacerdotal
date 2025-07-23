@@ -22,9 +22,12 @@ export function AuthHeader() {
             <Image 
               src="/san juan.png" 
               alt="Diócesis de San Juan de los Lagos"
-              width={60}
-              height={60}
-              className="h-14 w-auto"
+              width={56}
+              height={56}
+              quality={100}
+              priority={true}
+              className="h-14 w-14 object-contain logo-crisp"
+              style={{ imageRendering: 'crisp-edges' }}
             />
             <div>
               <h1 className="text-xl font-bold text-blue-900">

@@ -55,7 +55,10 @@ export default function Home() {
               alt="Diócesis de San Juan de los Lagos"
               width={120}
               height={120}
-              className="mx-auto mb-6"
+              quality={100}
+              priority={true}
+              className="mx-auto mb-6 h-30 w-30 object-contain logo-crisp"
+              style={{ imageRendering: 'crisp-edges' }}
             />
           </div>
           
@@ -184,7 +187,9 @@ export default function Home() {
                   alt="Diócesis de San Juan de los Lagos"
                   width={40}
                   height={40}
-                  className="h-10 w-auto"
+                  quality={100}
+                  className="h-10 w-10 object-contain"
+                  style={{ imageRendering: 'crisp-edges' }}
                 />
                 <h3 className="text-lg font-semibold">Diócesis de San Juan de los Lagos</h3>
               </div>

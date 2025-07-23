@@ -49,7 +49,10 @@ export default function WaitingApproval() {
             alt="Diócesis de San Juan de los Lagos"
             width={80}
             height={80}
-            className="h-20 w-auto"
+            quality={100}
+            priority={true}
+            className="h-20 w-20 object-contain"
+            style={{ imageRendering: 'crisp-edges' }}
           />
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">

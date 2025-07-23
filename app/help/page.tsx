@@ -20,7 +20,10 @@ export default function HelpPage() {
             alt="Diócesis de San Juan de los Lagos"
             width={80}
             height={80}
-            className="h-20 w-auto mx-auto mb-6"
+            quality={100}
+            priority={true}
+            className="h-20 w-20 object-contain mx-auto mb-6"
+            style={{ imageRendering: 'crisp-edges' }}
           />
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Ayuda - Directorio Sacerdotal

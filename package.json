@@ -14,7 +14,8 @@
     "db:studio": "prisma studio",
     "setup:admin": "node scripts/create-admin.js",
     "setup:sample": "node scripts/seed-database.js",
-    "setup:all": "npm run db:push && npm run setup:admin && npm run setup:sample"
+    "setup:all": "npm run db:push && npm run setup:admin && npm run setup:sample",
+    "update:admin": "node scripts/update-admin.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",

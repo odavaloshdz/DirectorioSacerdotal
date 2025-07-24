@@ -105,6 +105,7 @@ export async function GET() {
       CREATE TABLE "cities" (
         "id" TEXT NOT NULL,
         "name" TEXT NOT NULL,
+        "state" TEXT NOT NULL,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "cities_pkey" PRIMARY KEY ("id")
@@ -116,6 +117,9 @@ export async function GET() {
         "id" TEXT NOT NULL,
         "name" TEXT NOT NULL,
         "cityId" TEXT NOT NULL,
+        "address" TEXT,
+        "phone" TEXT,
+        "email" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "parishes_pkey" PRIMARY KEY ("id")
@@ -186,6 +190,7 @@ export async function GET() {
     await prisma.$executeRaw`CREATE UNIQUE INDEX "sessions_sessionToken_key" ON "sessions"("sessionToken");`
     await prisma.$executeRaw`CREATE UNIQUE INDEX "verification_tokens_token_key" ON "verification_tokens"("token");`
     await prisma.$executeRaw`CREATE UNIQUE INDEX "verification_tokens_identifier_token_key" ON "verification_tokens"("identifier", "token");`
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "cities_name_key" ON "cities"("name");`
     await prisma.$executeRaw`CREATE UNIQUE INDEX "priests_userId_key" ON "priests"("userId");`
     await prisma.$executeRaw`CREATE UNIQUE INDEX "priestSpecialties_priestId_specialtyId_key" ON "priestSpecialties"("priestId", "specialtyId");`
     

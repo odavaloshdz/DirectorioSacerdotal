@@ -144,9 +144,8 @@ export async function POST(request: Request) {
         userId: user.id,
         firstName,
         lastName,
-        // TODO: Fix parish relationship after deployment
+        // TODO: Fix parish and specialties relationships after deployment
         phone: phone || null,
-        specialties: specialties || null,
         ordainedDate: ordainedDate ? new Date(ordainedDate) : null,
         biography: biography || null,
         profileImage: profileImagePath,

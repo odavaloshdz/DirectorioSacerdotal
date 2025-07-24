@@ -3,57 +3,87 @@
  * @param ordainedDate - Fecha de ordenación
  * @returns Cadena con el tiempo transcurrido (ej: "5 años, 3 meses")
  */
-export function calculateOrdinationTime(ordainedDate: Date | string | null): string {
-  if (!ordainedDate) return 'No especificado'
+export function calculateOrdinationTime(ordainedDate: string | null): string {
+  if (!ordainedDate) return 'Fecha no especificada'
   
-  const ordained = new Date(ordainedDate)
-  const now = new Date()
+  const today = new Date()
+  const ordination = new Date(ordainedDate)
+  const years = today.getFullYear() - ordination.getFullYear()
+  const months = today.getMonth() - ordination.getMonth()
   
-  if (ordained > now) return 'Fecha futura'
-  
-  const diffTime = Math.abs(now.getTime() - ordained.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  const years = Math.floor(diffDays / 365)
-  const months = Math.floor((diffDays % 365) / 30)
-  
-  if (years === 0 && months === 0) {
-    return 'Menos de un mes'
+  let totalYears = years
+  if (months < 0) {
+    totalYears -= 1
   }
   
-  if (years === 0) {
-    return `${months} ${months === 1 ? 'mes' : 'meses'}`
+  if (totalYears === 0) {
+    return 'Menos de un año'
+  } else if (totalYears === 1) {
+    return '1 año'
+  } else {
+    return `${totalYears} años`
   }
-  
-  if (months === 0) {
-    return `${years} ${years === 1 ? 'año' : 'años'}`
-  }
-  
-  return `${years} ${years === 1 ? 'año' : 'años'}, ${months} ${months === 1 ? 'mes' : 'meses'}`
 }
 
 /**
- * Formatea el nombre completo de un sacerdote
+ * Formatea el nombre completo del sacerdote con título
  */
 export function formatPriestName(firstName: string, lastName: string): string {
   return `P. ${firstName} ${lastName}`
 }
 
 /**
- * Obtiene la URL de la imagen de perfil o una imagen por defecto
- */
-export function getPriestProfileImage(profileImage: string | null): string {
-  return profileImage || '/images/default-priest.svg'
-}
-
-/**
- * Parsea las especialidades desde JSON string
+ * Parsea las especialidades desde string a array
  */
 export function parseSpecialties(specialties: string | null): string[] {
   if (!specialties) return []
+  
   try {
+    // Try parsing as JSON first (new format)
     return JSON.parse(specialties)
   } catch {
-    return []
+    // Fallback to comma-separated string (old format)
+    return specialties.split(',').map(s => s.trim()).filter(s => s.length > 0)
   }
+}
+
+/**
+ * Obtiene la URL de la imagen de perfil o una imagen por defecto
+ * Maneja tanto URLs de Cloudinary como archivos locales
+ */
+export function getPriestProfileImage(profileImage: string | null): string {
+  // If no image, return default
+  if (!profileImage) {
+    return '/images/default-priest.svg'
+  }
+  
+  // If it's already a full URL (Cloudinary), return as is
+  if (profileImage.startsWith('http')) {
+    return profileImage
+  }
+  
+  // If it's a local path (legacy), return as is
+  if (profileImage.startsWith('/')) {
+    return profileImage
+  }
+  
+  // Fallback to default
+  return '/images/default-priest.svg'
+}
+
+/**
+ * Verifica si una URL de imagen es válida
+ */
+export function isValidImageUrl(url: string): boolean {
+  if (!url) return false
+  
+  // Check if it's a Cloudinary URL
+  if (url.includes('cloudinary.com')) return true
+  
+  // Check if it's a valid local path
+  if (url.startsWith('/') && (url.includes('.jpg') || url.includes('.png') || url.includes('.jpeg') || url.includes('.webp') || url.includes('.svg'))) {
+    return true
+  }
+  
+  return false
 } 

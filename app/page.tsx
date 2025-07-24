@@ -53,11 +53,11 @@ export default function Home() {
             <Image 
               src="/logodiosesis.png" 
               alt="Diócesis de San Juan de los Lagos"
-              width={160}
-              height={160}
+              width={200}
+              height={200}
               quality={100}
               priority={true}
-              className="mx-auto mb-6 h-40 w-40 object-contain logo-crisp"
+              className="mx-auto mb-6 h-52 w-52 object-contain logo-crisp"
               style={{ imageRendering: 'crisp-edges' }}
             />
           </div>
@@ -185,10 +185,10 @@ export default function Home() {
                 <Image 
                   src="/logodiosesis.png" 
                   alt="Diócesis de San Juan de los Lagos"
-                  width={48}
-                  height={48}
+                  width={64}
+                  height={64}
                   quality={100}
-                  className="h-12 w-12 object-contain"
+                  className="h-16 w-16 object-contain"
                   style={{ imageRendering: 'crisp-edges' }}
                 />
                 <h3 className="text-lg font-semibold">Diócesis de San Juan de los Lagos</h3>

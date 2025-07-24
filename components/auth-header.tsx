@@ -17,16 +17,16 @@ export function AuthHeader() {
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-24">
           <Link href="/" className="flex items-center space-x-4">
             <Image 
               src="/logodiosesis.png" 
               alt="Diócesis de San Juan de los Lagos"
-              width={56}
-              height={56}
+              width={80}
+              height={80}
               quality={100}
               priority={true}
-              className="h-14 w-14 object-contain logo-crisp"
+              className="h-20 w-20 object-contain logo-crisp"
               style={{ imageRendering: 'crisp-edges' }}
             />
             <div>

@@ -47,11 +47,11 @@ export default function WaitingApproval() {
           <Image 
             src="/logodiosesis.png" 
             alt="Diócesis de San Juan de los Lagos"
-            width={100}
-            height={100}
+            width={140}
+            height={140}
             quality={100}
             priority={true}
-            className="h-24 w-24 object-contain"
+            className="h-36 w-36 object-contain"
             style={{ imageRendering: 'crisp-edges' }}
           />
         </div>

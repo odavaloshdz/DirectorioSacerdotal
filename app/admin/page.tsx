@@ -8,26 +8,24 @@ import {
   CheckIcon, 
   XMarkIcon, 
   ClockIcon,
-  ExclamationTriangleIcon,
-  CogIcon,
+  Cog6ToothIcon,
   DocumentTextIcon,
-  ChatBubbleBottomCenterTextIcon
+  LightBulbIcon
 } from '@heroicons/react/24/outline'
 import { PriestsManagement } from '@/components/admin/priests-management'
 import { CatalogManagement } from '@/components/admin/catalog-management'
 import { SuggestionsManagement } from '@/components/admin/suggestions-management'
+import { TestDataCreator } from '@/components/admin/test-data-creator'
 
 interface PendingPriest {
   id: string
   firstName: string
   lastName: string
-  parish: string | null
   phone: string | null
-  status: string
+  parish: string | null
   createdAt: string
   user: {
     email: string
-    name: string
   }
 }
 
@@ -97,8 +95,8 @@ export default function AdminPage() {
   const handlePriestAction = async (priestId: string, action: 'approve' | 'reject') => {
     setActionLoading(priestId)
     try {
-      const response = await fetch('/api/admin/manage-priest', {
-        method: 'POST',
+      const response = await fetch('/api/admin/priests', {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -109,13 +107,12 @@ export default function AdminPage() {
       })
 
       if (response.ok) {
-        // Refresh data after action
-        await fetchData()
+        fetchData()
       } else {
-        const error = await response.json()
-        alert(error.error || 'Error al procesar la acción')
+        alert('Error al procesar la acción')
       }
     } catch (error) {
+      console.error('Error:', error)
       alert('Error al procesar la acción')
     } finally {
       setActionLoading(null)
@@ -141,68 +138,93 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
-                <p className="mt-2 text-gray-600">
-                  Gestión de sacerdotes - Diócesis de San Juan de los Lagos
-                </p>
-              </div>
-              
-              {/* Tabs */}
-              <div className="flex space-x-1">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
+              <p className="mt-2 text-gray-600">
+                Gestión del Directorio Sacerdotal - Diócesis de San Juan de los Lagos
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-500">
+                Bienvenido, {session.user?.name}
+              </span>
+              <button
+                onClick={() => router.push('/api/auth/signout')}
+                className="px-4 py-2 text-sm text-red-600 hover:text-red-700"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="mt-6">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'overview'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <UserGroupIcon className="h-4 w-4 inline mr-2" />
-                  Resumen
+                  <div className="flex items-center space-x-2">
+                    <UserGroupIcon className="h-5 w-5" />
+                    <span>Resumen</span>
+                  </div>
                 </button>
+
                 <button
                   onClick={() => setActiveTab('manage')}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'manage'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <CogIcon className="h-4 w-4 inline mr-2" />
-                  Sacerdotes
+                  <div className="flex items-center space-x-2">
+                    <Cog6ToothIcon className="h-5 w-5" />
+                    <span>Gestionar Sacerdotes</span>
+                  </div>
                 </button>
+
                 <button
                   onClick={() => setActiveTab('catalogs')}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'catalogs'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <DocumentTextIcon className="h-4 w-4 inline mr-2" />
-                  Catálogos
+                  <div className="flex items-center space-x-2">
+                    <DocumentTextIcon className="h-5 w-5" />
+                    <span>Catálogos</span>
+                  </div>
                 </button>
+
                 <button
                   onClick={() => setActiveTab('suggestions')}
-                  className={`relative px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm relative ${
                     activeTab === 'suggestions'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <ChatBubbleBottomCenterTextIcon className="h-4 w-4 inline mr-2" />
-                  Sugerencias
+                  <div className="flex items-center space-x-2">
+                    <LightBulbIcon className="h-5 w-5" />
+                    <span>Sugerencias</span>
+                  </div>
                   {pendingSuggestionsCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {pendingSuggestionsCount}
                     </span>
                   )}
                 </button>
-              </div>
+              </nav>
+            </div>
             </div>
           </div>
         </div>
@@ -340,7 +362,10 @@ export default function AdminPage() {
         ) : activeTab === 'manage' ? (
           <PriestsManagement />
         ) : activeTab === 'catalogs' ? (
-          <CatalogManagement />
+          <div className="space-y-8">
+            <CatalogManagement />
+            <TestDataCreator />
+          </div>
         ) : (
           <SuggestionsManagement />
         )}

@@ -71,10 +71,24 @@ export async function POST(request: NextRequest) {
     const priest = await prisma.priest.findUnique({
       where: { userId },
       include: {
-        parish: true,
+        parish: {
+          select: {
+            id: true,
+            name: true,
+            city: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
         specialties: {
           include: {
-            specialty: true
+            specialty: {
+              select: {
+                name: true
+              }
+            }
           }
         }
       }
@@ -87,7 +101,7 @@ export async function POST(request: NextRequest) {
     const { field, suggestedValue, reason } = await request.json()
 
     // Validate required fields
-    if (!field || !suggestedValue) {
+    if (!field || !suggestedValue || suggestedValue.trim() === '') {
       return NextResponse.json(
         { error: 'Campo y valor sugerido son requeridos' },
         { status: 400 }
@@ -123,7 +137,7 @@ export async function POST(request: NextRequest) {
         currentValue = priest.biography
         break
       case 'parishId':
-        currentValue = priest.parishId
+        currentValue = priest.parish ? `${priest.parish.name}, ${priest.parish.city.name}` : null
         break
       case 'specialties':
         currentValue = priest.specialties.map(ps => ps.specialty.name).join(', ')
@@ -155,8 +169,8 @@ export async function POST(request: NextRequest) {
         priestId: priest.id,
         field,
         currentValue,
-        suggestedValue,
-        reason: reason || null,
+        suggestedValue: suggestedValue.trim(),
+        reason: reason?.trim() || null,
         status: 'PENDING'
       }
     })

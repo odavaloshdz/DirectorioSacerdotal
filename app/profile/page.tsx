@@ -20,12 +20,19 @@ interface PriestProfile {
   id: string
   firstName: string
   lastName: string
-  parish: string | null
+  parishId: string | null
   phone: string | null
   specialties: string | null
   profileImage: string | null
   ordainedDate: string | null
   biography: string | null
+  parish?: {
+    id: string
+    name: string
+    city: {
+      name: string
+    }
+  }
   user: {
     email: string
   }
@@ -102,6 +109,12 @@ export default function ProfilePage() {
 
   const handleSuggestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!suggestionField || !suggestionValue.trim()) {
+      alert('Por favor completa todos los campos requeridos')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -112,10 +125,12 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           field: suggestionField,
-          suggestedValue: suggestionValue,
-          reason: suggestionReason,
+          suggestedValue: suggestionValue.trim(),
+          reason: suggestionReason.trim() || null,
         }),
       })
+
+      const data = await response.json()
 
       if (response.ok) {
         setShowSuggestionForm(false)
@@ -125,7 +140,7 @@ export default function ProfilePage() {
         fetchSuggestions()
         alert('Sugerencia enviada correctamente')
       } else {
-        alert('Error al enviar sugerencia')
+        alert(data.error || 'Error al enviar sugerencia')
       }
     } catch (error) {
       console.error('Error submitting suggestion:', error)
@@ -138,7 +153,7 @@ export default function ProfilePage() {
   const fieldLabels: { [key: string]: string } = {
     firstName: 'Nombre',
     lastName: 'Apellido',
-    parish: 'Parroquia',
+    parishId: 'Parroquia',
     phone: 'Teléfono',
     specialties: 'Especialidades',
     biography: 'Biografía',
@@ -151,13 +166,34 @@ export default function ProfilePage() {
     switch (field) {
       case 'firstName': return profile.firstName
       case 'lastName': return profile.lastName
-      case 'parish': return profile.parish || 'No especificado'
+      case 'parishId': 
+        return profile.parish ? `${profile.parish.name}, ${profile.parish.city.name}` : 'No especificado'
       case 'phone': return profile.phone || 'No especificado'
       case 'specialties': return parseSpecialties(profile.specialties).join(', ') || 'No especificado'
       case 'biography': return profile.biography || 'No especificado'
       case 'profileImage': return profile.profileImage ? 'Imagen cargada' : 'Sin imagen'
       default: return ''
     }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      APPROVED: 'bg-green-100 text-green-800',
+      REJECTED: 'bg-red-100 text-red-800'
+    }
+    
+    const labels = {
+      PENDING: 'Pendiente',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada'
+    }
+
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
+        {labels[status as keyof typeof labels]}
+      </span>
+    )
   }
 
   if (status === 'loading' || loading) {
@@ -205,151 +241,145 @@ export default function ProfilePage() {
             </div>
             <button
               onClick={() => setShowSuggestionForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
             >
-              <PencilIcon className="h-4 w-4" />
-              <span>Sugerir Cambio</span>
+              <PencilIcon className="h-4 w-4 mr-2" />
+              Sugerir Cambios
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Profile Information */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Información Personal</h2>
-            
+        {/* Profile Information */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Información del Perfil</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <UserCircleIcon className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Nombre completo</p>
-                  <p className="font-medium">{profile.firstName} {profile.lastName}</p>
+              <div>
+                <div className="flex items-center text-sm text-gray-600 mb-1">
+                  <UserCircleIcon className="h-4 w-4 mr-2" />
+                  <span className="font-medium">Nombre Completo</span>
                 </div>
+                <p className="text-gray-900">{formatPriestName(profile.firstName, profile.lastName)}</p>
               </div>
 
               {profile.parish && (
-                <div className="flex items-center space-x-3">
-                  <MapPinIcon className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Parroquia</p>
-                    <p className="font-medium">{profile.parish}</p>
+                <div>
+                  <div className="flex items-center text-sm text-gray-600 mb-1">
+                    <MapPinIcon className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Parroquia</span>
                   </div>
+                  <p className="text-gray-900">{profile.parish.name}, {profile.parish.city.name}</p>
                 </div>
               )}
 
               {profile.phone && (
-                <div className="flex items-center space-x-3">
-                  <PhoneIcon className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Teléfono</p>
-                    <p className="font-medium">{profile.phone}</p>
+                <div>
+                  <div className="flex items-center text-sm text-gray-600 mb-1">
+                    <PhoneIcon className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Teléfono</span>
                   </div>
+                  <p className="text-gray-900">{profile.phone}</p>
                 </div>
               )}
 
               {profile.ordainedDate && (
-                <div className="flex items-center space-x-3">
-                  <CalendarIcon className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Fecha de ordenación</p>
-                    <p className="font-medium">
-                      {new Date(profile.ordainedDate).toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
+                <div>
+                  <div className="flex items-center text-sm text-gray-600 mb-1">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Fecha de Ordenación</span>
                   </div>
+                  <p className="text-gray-900">
+                    {new Date(profile.ordainedDate).toLocaleDateString('es-ES')} 
+                    <span className="text-sm text-blue-600 ml-2">
+                      ({calculateOrdinationTime(profile.ordainedDate)})
+                    </span>
+                  </p>
                 </div>
               )}
+            </div>
 
+            <div className="space-y-4">
               {parseSpecialties(profile.specialties).length > 0 && (
-                <div className="flex items-start space-x-3">
-                  <BookOpenIcon className="h-5 w-5 text-gray-400 mt-1" />
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">Especialidades</p>
-                    <div className="flex flex-wrap gap-2">
-                      {parseSpecialties(profile.specialties).map((specialty, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                        >
-                          {specialty}
-                        </span>
-                      ))}
-                    </div>
+                <div>
+                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                    <BookOpenIcon className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Especialidades Ministeriales</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {parseSpecialties(profile.specialties).map((specialty, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                      >
+                        {specialty}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
 
               {profile.biography && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-gray-500 mb-2">Biografía</p>
-                  <p className="text-gray-700 leading-relaxed">{profile.biography}</p>
+                <div>
+                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                    <BookOpenIcon className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Biografía</span>
+                  </div>
+                  <p className="text-gray-900 text-sm leading-relaxed">{profile.biography}</p>
                 </div>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Suggestions History */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Historial de Sugerencias</h2>
-            
-            {suggestions.length === 0 ? (
-              <div className="text-center py-8">
-                <PencilIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No has enviado ninguna sugerencia</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Usa el botón "Sugerir Cambio" para proponer modificaciones a tu perfil
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {suggestions.map((suggestion) => (
-                  <div
-                    key={suggestion.id}
-                    className="border rounded-lg p-4"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        {fieldLabels[suggestion.field] || suggestion.field}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        suggestion.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : suggestion.status === 'APPROVED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {suggestion.status === 'PENDING' ? 'Pendiente' :
-                         suggestion.status === 'APPROVED' ? 'Aprobado' : 'Rechazado'}
-                      </span>
+        {/* Suggestions History */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Historial de Sugerencias</h2>
+          
+          {suggestions.length === 0 ? (
+            <div className="text-center py-8">
+              <PencilIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay sugerencias</h3>
+              <p className="text-gray-600">
+                Cuando envíes sugerencias de cambios aparecerán aquí.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {suggestions.map((suggestion) => (
+                <div key={suggestion.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">
+                        {fieldLabels[suggestion.field]} 
+                      </h4>
+                      {getStatusBadge(suggestion.status)}
                     </div>
-                    
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p><span className="font-medium">Valor actual:</span> {suggestion.currentValue || 'No especificado'}</p>
-                      <p><span className="font-medium">Valor sugerido:</span> {suggestion.suggestedValue}</p>
-                      {suggestion.reason && (
-                        <p><span className="font-medium">Razón:</span> {suggestion.reason}</p>
-                      )}
-                    </div>
-                    
-                    <p className="text-xs text-gray-400 mt-2">
-                      Enviado el {new Date(suggestion.createdAt).toLocaleDateString('es-ES')}
-                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><span className="font-medium">Valor actual:</span> {suggestion.currentValue || 'No especificado'}</p>
+                    <p><span className="font-medium">Valor sugerido:</span> {suggestion.suggestedValue}</p>
+                    {suggestion.reason && (
+                      <p><span className="font-medium">Razón:</span> {suggestion.reason}</p>
+                    )}
+                  </div>
+                  
+                  <p className="text-xs text-gray-400 mt-2">
+                    Enviado el {new Date(suggestion.createdAt).toLocaleDateString('es-ES')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Suggestion Form Modal */}
         {showSuggestionForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Sugerir Cambio</h3>
+                <h3 className="text-lg font-medium text-gray-900">Sugerir Cambio</h3>
                 <button
                   onClick={() => setShowSuggestionForm(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -360,8 +390,8 @@ export default function ProfilePage() {
 
               <form onSubmit={handleSuggestionSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Campo a modificar
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Campo a modificar *
                   </label>
                   <select
                     value={suggestionField}
@@ -369,16 +399,19 @@ export default function ProfilePage() {
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Seleccionar campo</option>
-                    {Object.entries(fieldLabels).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
+                    <option value="">Seleccionar campo...</option>
+                    <option value="firstName">Nombre</option>
+                    <option value="lastName">Apellido</option>
+                    <option value="phone">Teléfono</option>
+                    <option value="parishId">Parroquia</option>
+                    <option value="biography">Biografía</option>
+                    <option value="profileImage">Imagen de perfil</option>
                   </select>
                 </div>
 
                 {suggestionField && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Valor actual
                     </label>
                     <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
@@ -388,8 +421,8 @@ export default function ProfilePage() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nuevo valor sugerido
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Valor sugerido *
                   </label>
                   <textarea
                     value={suggestionValue}
@@ -397,12 +430,12 @@ export default function ProfilePage() {
                     required
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Escribe el nuevo valor..."
+                    placeholder="Ingresa el nuevo valor..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Razón del cambio (opcional)
                   </label>
                   <textarea
@@ -410,22 +443,22 @@ export default function ProfilePage() {
                     onChange={(e) => setSuggestionReason(e.target.value)}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Explica por qué quieres hacer este cambio..."
+                    placeholder="Explica por qué necesitas este cambio..."
                   />
                 </div>
 
-                <div className="flex space-x-3 pt-4">
+                <div className="flex justify-end space-x-4 pt-4">
                   <button
                     type="button"
                     onClick={() => setShowSuggestionForm(false)}
-                    className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
                   >
                     {submitting ? 'Enviando...' : 'Enviar Sugerencia'}
                   </button>

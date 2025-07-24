@@ -25,7 +25,7 @@ export async function GET() {
       )
     }
 
-    // Fetch approved priests
+    // Fetch approved priests with complete parish information
     const priests = await prisma.priest.findMany({
       where: {
         status: 'APPROVED'
@@ -36,11 +36,33 @@ export async function GET() {
             email: true,
             name: true
           }
+        },
+        parish: {
+          select: {
+            id: true,
+            name: true,
+            city: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
+        specialties: {
+          include: {
+            specialty: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
         }
       },
-      orderBy: {
-        lastName: 'asc'
-      }
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
     })
 
     return NextResponse.json({ priests })

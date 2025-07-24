@@ -65,6 +65,7 @@ export async function PATCH(request: Request) {
     }
 
     const userRole = (session.user as any)?.role
+    const adminUserId = (session.user as any)?.id
 
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
@@ -75,26 +76,19 @@ export async function PATCH(request: Request) {
 
     const { suggestionId, action } = await request.json()
 
-    if (!suggestionId || !action) {
+    if (!suggestionId || !action || !['approve', 'reject'].includes(action)) {
       return NextResponse.json(
-        { error: 'ID de sugerencia y acción son requeridos' },
+        { error: 'Parámetros inválidos' },
         { status: 400 }
       )
     }
 
-    if (!['approve', 'reject'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Acción no válida. Debe ser "approve" o "reject"' },
-        { status: 400 }
-      )
-    }
-
-    const adminUserId = (session.user as any)?.id
-
-    // Get the suggestion with priest data
+    // Get the suggestion
     const suggestion = await prisma.profileSuggestion.findUnique({
       where: { id: suggestionId },
-      include: { priest: true }
+      include: {
+        priest: true
+      }
     })
 
     if (!suggestion) {
@@ -106,15 +100,30 @@ export async function PATCH(request: Request) {
 
     if (suggestion.status !== 'PENDING') {
       return NextResponse.json(
-        { error: 'Esta sugerencia ya fue procesada' },
+        { error: 'Esta sugerencia ya ha sido procesada' },
         { status: 400 }
       )
     }
 
     if (action === 'approve') {
-      // Apply the change to the priest record and update suggestion status
+      // Special handling for different field types
       const updateData: any = {}
-      updateData[suggestion.field] = suggestion.suggestedValue
+      
+      if (suggestion.field === 'parishId') {
+        // For parishId, we need to validate that the suggested value contains a valid parish
+        // The suggested value should be in format "Parish Name, City Name"
+        // For now, we'll allow manual handling by admin - they should provide the actual parish ID
+        return NextResponse.json({
+          error: 'Las sugerencias de parroquia requieren procesamiento manual. Por favor, edita el sacerdote directamente desde el panel de administración.'
+        }, { status: 400 })
+      } else if (suggestion.field === 'specialties') {
+        // For specialties, we might need special handling too
+        // For now, we'll store as string and let the system handle it
+        updateData[suggestion.field] = suggestion.suggestedValue
+      } else {
+        // For other fields, direct assignment
+        updateData[suggestion.field] = suggestion.suggestedValue
+      }
 
       await prisma.$transaction([
         // Update the priest record

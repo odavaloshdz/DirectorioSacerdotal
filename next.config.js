@@ -33,9 +33,7 @@ const nextConfig = {
 
   // Ensure environment variables are available
   env: {
-    DATABASE_PROVIDER: process.env.DATABASE_PROVIDER,
     DATABASE_URL: process.env.DATABASE_URL,
-    DIRECT_URL: process.env.DIRECT_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
   },

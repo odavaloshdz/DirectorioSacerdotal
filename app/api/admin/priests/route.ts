@@ -144,7 +144,7 @@ export async function POST(request: Request) {
         userId: user.id,
         firstName,
         lastName,
-        parish: parish || null,
+        parishId: parish || null,
         phone: phone || null,
         specialties: specialties || null,
         ordainedDate: ordainedDate ? new Date(ordainedDate) : null,

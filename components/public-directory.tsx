@@ -1,25 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { MagnifyingGlassIcon, MapPinIcon, UserGroupIcon } from '@heroicons/react/24/outline'
-import { calculateOrdinationTime, formatPriestName } from '@/lib/utils'
-import { PriestImage } from './priest-image'
+import Image from 'next/image'
+import { MagnifyingGlassIcon, MapPinIcon, CalendarIcon } from '@heroicons/react/24/outline'
 
-interface PublicPriest {
+interface Priest {
   id: string
   firstName: string
   lastName: string
   profileImage: string | null
   ordainedDate: string | null
-  parish?: {
+  parish: {
     id: string
     name: string
     city: {
       name: string
     }
-  }
-  specialties?: Array<{
+  } | null
+  specialties: Array<{
     specialty: {
       id: string
       name: string
@@ -36,7 +34,7 @@ interface Parish {
 }
 
 export function PublicDirectory() {
-  const [priests, setPriests] = useState<PublicPriest[]>([])
+  const [priests, setPriests] = useState<Priest[]>([])
   const [parishes, setParishes] = useState<Parish[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -49,17 +47,16 @@ export function PublicDirectory() {
 
   const fetchPriests = async () => {
     try {
-      setLoading(true)
       const params = new URLSearchParams()
       if (searchTerm) params.append('search', searchTerm)
       if (parishFilter) params.append('parish', parishFilter)
-      params.append('limit', showAll ? '50' : '6')
-
+      
       const response = await fetch(`/api/public/priests?${params}`)
+      const data = await response.json()
+      
       if (response.ok) {
-        const data = await response.json()
-        setPriests(data.priests)
-        setParishes(data.parishes)
+        setPriests(data.priests || [])
+        setParishes(data.parishes || [])
       }
     } catch (error) {
       console.error('Error fetching priests:', error)
@@ -68,166 +65,199 @@ export function PublicDirectory() {
     }
   }
 
-  const handleShowMore = () => {
-    setShowAll(true)
-    fetchPriests()
-  }
+  const displayedPriests = showAll ? priests : priests.slice(0, 6)
 
-  if (loading && priests.length === 0) {
-    return (
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando directorio...</p>
-        </div>
-      </section>
-    )
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'No especificada'
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    } catch {
+      return 'No especificada'
+    }
   }
 
   return (
-    <section className="py-16 bg-gray-50" id="directorio-publico">
-      <div className="max-w-7xl mx-auto px-4">
+    <section className="py-12 sm:py-16 lg:py-20 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Directorio de Sacerdotes
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4 px-4">
+            Directorio Público de Sacerdotes
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Conoce a los sacerdotes de nuestra diócesis. Encuentra información sobre 
-            su ministerio, especialidades y parroquia de servicio.
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
+            Conoce a nuestros sacerdotes y las parroquias donde ejercen su ministerio pastoral.
           </p>
-        </div>
 
-        {/* Search and Filters */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-            <div className="relative">
-              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          {/* Search and Filter Controls */}
+          <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
+            {/* Search Input */}
+            <div className="relative mx-4 sm:mx-0">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              </div>
               <input
                 type="text"
-                placeholder="Buscar por nombre o especialidad..."
+                placeholder="Buscar por nombre del sacerdote..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
               />
             </div>
-            <select
-              value={parishFilter}
-              onChange={(e) => setParishFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Todas las parroquias</option>
-              {parishes.map((parish) => (
-                <option key={parish.id} value={parish.name}>
-                  {parish.name} - {parish.city.name}
-                </option>
-              ))}
-            </select>
+
+            {/* Parish Filter */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mx-4 sm:mx-0">
+              <select
+                value={parishFilter}
+                onChange={(e) => setParishFilter(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+              >
+                <option value="">Todas las parroquias</option>
+                {parishes.map((parish) => (
+                  <option key={parish.id} value={parish.id}>
+                    {parish.name} - {parish.city.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => {
+                  setSearchTerm('')
+                  setParishFilter('')
+                }}
+                className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base font-medium"
+              >
+                Limpiar filtros
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Priests Grid */}
-        {priests.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {priests.map((priest) => (
-              <div
-                key={priest.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="text-center mb-4">
-                  <div className="mb-4">
-                    <PriestImage
-                      profileImage={priest.profileImage}
-                      firstName={priest.firstName}
-                      lastName={priest.lastName}
-                      size={80}
-                      className="mx-auto"
-                    />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {formatPriestName(priest.firstName, priest.lastName)}
-                  </h3>
-                  {priest.ordainedDate && (
-                    <p className="text-sm text-blue-600 font-medium mb-2">
-                      {calculateOrdinationTime(priest.ordainedDate)} de ordenación
-                    </p>
-                  )}
-                </div>
+        {/* Loading State */}
+        {loading ? (
+          <div className="text-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-sm sm:text-base">Cargando directorio...</p>
+          </div>
+        ) : (
+          <>
+            {/* Results Count */}
+            <div className="text-center mb-6 sm:mb-8">
+              <p className="text-gray-600 text-sm sm:text-base px-4">
+                {searchTerm || parishFilter 
+                  ? `${priests.length} sacerdote${priests.length !== 1 ? 's' : ''} encontrado${priests.length !== 1 ? 's' : ''}` 
+                  : `Mostrando ${Math.min(displayedPriests.length, priests.length)} de ${priests.length} sacerdotes`}
+              </p>
+            </div>
 
-                <div className="space-y-3">
-                  {priest.parish && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
-                      <span>{priest.parish.name}, {priest.parish.city.name}</span>
+            {/* Priests Grid */}
+            {displayedPriests.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
+                {displayedPriests.map((priest) => (
+                  <div 
+                    key={priest.id} 
+                    className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 sm:p-6 mx-4 sm:mx-0"
+                  >
+                    {/* Profile Image */}
+                    <div className="text-center mb-4">
+                      {priest.profileImage ? (
+                        <Image
+                          src={priest.profileImage}
+                          alt={`${priest.firstName} ${priest.lastName}`}
+                          width={80}
+                          height={80}
+                          className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 font-bold text-lg sm:text-xl">
+                            {priest.firstName.charAt(0)}{priest.lastName.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {priest.specialties && priest.specialties.length > 0 && (
-                    <div className="flex items-start text-sm text-gray-600">
-                      <UserGroupIcon className="h-4 w-4 mr-2 mt-0.5 text-gray-400 flex-shrink-0" />
-                      <div>
-                        <span className="font-medium">Especialidades:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {priest.specialties.slice(0, 3).map((ps) => (
+                    {/* Name */}
+                    <h3 className="text-center text-base sm:text-lg font-semibold text-gray-900 mb-3">
+                      P. {priest.firstName} {priest.lastName}
+                    </h3>
+
+                    {/* Parish */}
+                    {priest.parish && (
+                      <div className="flex items-start space-x-2 mb-3 text-xs sm:text-sm">
+                        <MapPinIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-gray-600">{priest.parish.name}</p>
+                          <p className="text-gray-500">{priest.parish.city.name}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ordination Date */}
+                    {priest.ordainedDate && (
+                      <div className="flex items-center space-x-2 mb-3 text-xs sm:text-sm">
+                        <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-600">
+                          Ordenado: {formatDate(priest.ordainedDate)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Specialties */}
+                    {priest.specialties && priest.specialties.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs sm:text-sm font-medium text-gray-700">Especialidades:</p>
+                        <div className="flex flex-wrap gap-1 sm:gap-2">
+                          {priest.specialties.slice(0, 3).map((specialty, index) => (
                             <span
-                              key={ps.specialty.id}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              key={index}
+                              className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
                             >
-                              {ps.specialty.name}
+                              {specialty.specialty.name}
                             </span>
                           ))}
                           {priest.specialties.length > 3 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
                               +{priest.specialties.length - 3} más
                             </span>
                           )}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No se encontraron sacerdotes
-            </h3>
-            <p className="text-gray-600">
-              Intenta ajustar los filtros de búsqueda
-            </p>
-          </div>
-        )}
+            ) : (
+              <div className="text-center py-8 sm:py-12">
+                <div className="text-gray-400 mb-4">
+                  <MagnifyingGlassIcon className="h-12 w-12 sm:h-16 sm:w-16 mx-auto" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                  No se encontraron sacerdotes
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base px-4">
+                  Intenta ajustar los filtros de búsqueda para encontrar más resultados.
+                </p>
+              </div>
+            )}
 
-        {/* Show More Button or Login Prompt */}
-        <div className="text-center">
-          {!showAll && priests.length >= 6 ? (
-            <button
-              onClick={handleShowMore}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Ver más sacerdotes
-            </button>
-          ) : (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                ¿Necesitas más información?
-              </h3>
-              <p className="text-blue-700 mb-4">
-                Inicia sesión para acceder al directorio completo con información de contacto
-                y detalles adicionales de nuestros sacerdotes.
-              </p>
-              <Link
-                href="/auth/signin"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Acceder al Directorio Completo
-              </Link>
-            </div>
-          )}
-        </div>
+            {/* Show More/Less Button */}
+            {priests.length > 6 && !searchTerm && !parishFilter && (
+              <div className="text-center">
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="px-6 sm:px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base"
+                >
+                  {showAll ? 'Mostrar menos' : `Ver todos (${priests.length} sacerdotes)`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </section>
   )

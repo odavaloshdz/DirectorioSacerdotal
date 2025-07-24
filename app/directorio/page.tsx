@@ -1,187 +1,168 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { 
   MagnifyingGlassIcon, 
   MapPinIcon, 
   PhoneIcon, 
+  EnvelopeIcon,
   CalendarIcon,
-  UserGroupIcon,
-  ChevronRightIcon
+  ExclamationTriangleIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline'
-import { calculateOrdinationTime, formatPriestName, getPriestProfileImage, parseSpecialties } from '@/lib/utils'
 
 interface Priest {
   id: string
   firstName: string
   lastName: string
-  parishId: string | null
   phone: string | null
-  specialties?: string | null | Array<{
-    specialty: {
-      id: string
-      name: string
-    }
-  }>
+  biography: string | null
   profileImage: string | null
   ordainedDate: string | null
-  parish?: {
+  status: string
+  user: {
+    email: string
+  } | null
+  parish: {
     id: string
     name: string
     city: {
       name: string
     }
   } | null
-  user: {
-    email: string
-    name?: string
+  specialties: string | Array<{
+    specialty: {
+      id: string
+      name: string
+    }
+  }>
+}
+
+interface Parish {
+  id: string
+  name: string
+  city: {
+    name: string
   }
 }
 
-export default function DirectorioPage() {
+export default function DirectoryPage() {
   const { data: session, status } = useSession()
-  const router = useRouter()
   const [priests, setPriests] = useState<Priest[]>([])
-  const [filteredPriests, setFilteredPriests] = useState<Priest[]>([])
+  const [parishes, setParishes] = useState<Parish[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [parishFilter, setParishFilter] = useState('')
-  const [selectedPriest, setSelectedPriest] = useState<Priest | null>(null)
 
   useEffect(() => {
-    if (status === 'loading') return
-
-    if (!session) {
-      router.push('/auth/signin')
-      return
+    if (status === 'unauthenticated') {
+      redirect('/auth/signin')
     }
-
-    // Check if user is authorized (approved priest or admin)
-    const userRole = (session.user as any)?.role
-    const priestStatus = (session.user as any)?.priest?.status
-
-    if (userRole !== 'ADMIN' && (userRole !== 'PRIEST' || priestStatus !== 'APPROVED')) {
-      router.push('/waiting-approval')
-      return
+    if (status === 'authenticated') {
+      fetchPriests()
     }
-
-    fetchPriests()
-  }, [session, status, router])
-
-  useEffect(() => {
-    // Filter priests based on search term and parish filter
-    let filtered = priests
-
-    if (searchTerm) {
-      filtered = filtered.filter(priest => {
-        try {
-          const fullName = `${priest.firstName || ''} ${priest.lastName || ''}`.toLowerCase()
-          const parishName = priest.parish?.name?.toLowerCase() || ''
-          const email = priest.user?.email?.toLowerCase() || ''
-          
-          // Handle specialties safely
-          let specialtiesText = ''
-          if (priest.specialties) {
-            if (typeof priest.specialties === 'string') {
-              specialtiesText = priest.specialties.toLowerCase()
-            } else if (Array.isArray(priest.specialties)) {
-              specialtiesText = priest.specialties
-                .map(s => s.specialty?.name || '')
-                .join(' ')
-                .toLowerCase()
-            }
-          }
-
-          return fullName.includes(searchTerm.toLowerCase()) ||
-                 parishName.includes(searchTerm.toLowerCase()) ||
-                 email.includes(searchTerm.toLowerCase()) ||
-                 specialtiesText.includes(searchTerm.toLowerCase())
-        } catch (error) {
-          console.error('Error filtering priest:', priest.id, error)
-          return false
-        }
-      })
-    }
-
-    if (parishFilter) {
-      filtered = filtered.filter(priest => 
-        priest.parish?.name?.toLowerCase().includes(parishFilter.toLowerCase())
-      )
-    }
-
-    setFilteredPriests(filtered)
-  }, [priests, searchTerm, parishFilter])
+  }, [status])
 
   const fetchPriests = async () => {
     try {
+      setLoading(true)
       setError(null)
       const response = await fetch('/api/priests')
-      if (response.ok) {
-        const data = await response.json()
-        setPriests(data.priests || [])
-        setFilteredPriests(data.priests || [])
-      } else {
-        throw new Error('Failed to fetch priests')
+      
+      if (!response.ok) {
+        throw new Error('Error al cargar los datos')
       }
+      
+      const data = await response.json()
+      setPriests(data.priests || [])
+      
+      // Extract unique parishes from priests data
+      const uniqueParishes = Array.from(
+        new Map(
+          data.priests
+            ?.filter((p: Priest) => p.parish)
+            .map((p: Priest) => [p.parish!.id, p.parish])
+        ).values()
+      ) as Parish[]
+      
+      setParishes(uniqueParishes)
     } catch (error) {
       console.error('Error fetching priests:', error)
-      setError('Error al cargar el directorio. Por favor, recarga la página.')
+      setError('Error al cargar el directorio. Por favor, intenta de nuevo.')
     } finally {
       setLoading(false)
     }
   }
 
-  const getUniqueParishes = () => {
+  // Helper function to safely parse specialties
+  const getSafeSpecialties = (specialties: string | Array<{specialty: {id: string, name: string}}>) => {
+    if (!specialties) return []
+    
+    if (typeof specialties === 'string') {
+      try {
+        const parsed = JSON.parse(specialties)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+    
+    if (Array.isArray(specialties)) {
+      return specialties
+    }
+    
+    return []
+  }
+
+  // Filter priests based on search and parish filter
+  const filteredPriests = priests.filter(priest => {
+    const searchTermLower = searchTerm.toLowerCase()
+    const matchesSearch = !searchTerm || 
+      priest.firstName.toLowerCase().includes(searchTermLower) ||
+      priest.lastName.toLowerCase().includes(searchTermLower) ||
+      priest.user?.email?.toLowerCase().includes(searchTermLower) ||
+      priest.parish?.name?.toLowerCase().includes(searchTermLower)
+
+    const matchesParish = !parishFilter || priest.parish?.name === parishFilter
+
+    return matchesSearch && matchesParish
+  })
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'No especificada'
     try {
-      const parishes = priests
-        .map(priest => priest.parish?.name)
-        .filter(parish => parish !== null && parish !== undefined && parish !== '')
-        .filter((parish, index, self) => self.indexOf(parish) === index)
-        .sort()
-      return parishes as string[]
-    } catch (error) {
-      console.error('Error getting parishes:', error)
-      return []
+      const date = new Date(dateString)
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    } catch {
+      return 'No especificada'
     }
   }
 
-  const clearFilters = () => {
-    setSearchTerm('')
-    setParishFilter('')
-  }
-
-  // Safe specialties parser
-  const getSafeSpecialties = (specialties: any): string[] => {
-    try {
-      if (!specialties) return []
-      
-      if (typeof specialties === 'string') {
-        return parseSpecialties(specialties)
-      }
-      
-      if (Array.isArray(specialties)) {
-        return specialties
-          .map(s => s.specialty?.name)
-          .filter(name => name && typeof name === 'string')
-      }
-      
-      return []
-    } catch (error) {
-      console.error('Error parsing specialties:', error)
-      return []
-    }
+  const formatSpecialties = (specialties: string | Array<{specialty: {id: string, name: string}}>) => {
+    const safeSpecialties = getSafeSpecialties(specialties)
+    if (safeSpecialties.length === 0) return 'Sin especialidades'
+    
+    return safeSpecialties
+      .map(s => s.specialty?.name || s)
+      .filter(Boolean)
+      .join(', ')
   }
 
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando directorio...</p>
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 text-sm sm:text-base">Cargando directorio...</p>
         </div>
       </div>
     )
@@ -189,279 +170,237 @@ export default function DirectorioPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
-            <p className="font-bold">Error</p>
-            <p>{error}</p>
-            <button
-              onClick={fetchPriests}
-              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Reintentar
-            </button>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <ExclamationTriangleIcon className="h-12 w-12 sm:h-16 sm:w-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">Error al cargar</h3>
+          <p className="text-gray-600 mb-4 text-sm sm:text-base">{error}</p>
+          <button
+            onClick={fetchPriests}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
+          >
+            <ArrowPathIcon className="h-4 w-4 mr-2" />
+            Reintentar
+          </button>
         </div>
       </div>
     )
   }
 
-  if (!session) {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Directorio Sacerdotal</h1>
-              <p className="mt-2 text-gray-600">
-                Diócesis de San Juan de los Lagos - {filteredPriests.length} de {priests.length} sacerdotes
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                Bienvenido, {session.user?.name}
-              </span>
-              <button
-                onClick={() => router.push('/api/auth/signout')}
-                className="px-4 py-2 text-sm text-red-600 hover:text-red-700"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-4 sm:py-6">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+              Directorio Sacerdotal
+            </h1>
+            <p className="mt-1 text-sm sm:text-base text-gray-500">
+              Directorio completo de la Diócesis de San Juan de los Lagos
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
+      {/* Search and Filters */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="space-y-3 sm:space-y-4">
+            {/* Search Input */}
             <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              </div>
               <input
                 type="text"
-                placeholder="Buscar por nombre, parroquia, email..."
+                placeholder="Buscar por nombre, email o parroquia..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
               />
             </div>
 
-            {/* Parish Filter */}
-            <select
-              value={parishFilter}
-              onChange={(e) => setParishFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Todas las parroquias</option>
-              {getUniqueParishes().map(parish => (
-                <option key={parish} value={parish}>{parish}</option>
-              ))}
-            </select>
-
-            {/* Clear Filters */}
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Limpiar filtros
-            </button>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPriests.map((priest) => {
-            const safeSpecialties = getSafeSpecialties(priest.specialties)
-            
-            return (
-              <div
-                key={priest.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => setSelectedPriest(priest)}
+            {/* Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <select
+                value={parishFilter}
+                onChange={(e) => setParishFilter(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
               >
-                <div className="text-center mb-4">
-                  <div className="mb-4">
-                    <Image
-                      src={getPriestProfileImage(priest.profileImage)}
-                      alt={`${priest.firstName || ''} ${priest.lastName || ''}`}
-                      width={80}
-                      height={80}
-                      className="w-20 h-20 rounded-full object-cover mx-auto"
-                    />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {formatPriestName(priest.firstName || '', priest.lastName || '')}
-                  </h3>
-                  {priest.ordainedDate && (
-                    <p className="text-sm text-blue-600 font-medium mb-2">
-                      {calculateOrdinationTime(priest.ordainedDate)} de ordenación
-                    </p>
-                  )}
-                </div>
+                <option value="">Todas las parroquias</option>
+                {parishes.map((parish) => (
+                  <option key={parish.id} value={parish.name}>
+                    {parish.name} - {parish.city.name}
+                  </option>
+                ))}
+              </select>
 
-                <div className="space-y-3">
-                  {priest.parish && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
-                      <span>{priest.parish.name}, {priest.parish.city?.name || 'Ciudad no especificada'}</span>
-                    </div>
-                  )}
+              <button
+                onClick={() => {
+                  setSearchTerm('')
+                  setParishFilter('')
+                }}
+                className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base font-medium sm:col-span-1 lg:col-span-2"
+              >
+                Limpiar filtros
+              </button>
+            </div>
 
-                  <div className="flex items-center text-sm text-gray-600">
-                    <PhoneIcon className="h-4 w-4 mr-2 text-gray-400" />
-                    <span>{priest.phone || 'Sin teléfono'}</span>
-                  </div>
-
-                  {safeSpecialties.length > 0 && (
-                    <div className="flex items-start text-sm text-gray-600">
-                      <UserGroupIcon className="h-4 w-4 mr-2 mt-0.5 text-gray-400 flex-shrink-0" />
-                      <div>
-                        <span className="font-medium">Especialidades:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {safeSpecialties.slice(0, 2).map((specialty, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                            >
-                              {specialty}
-                            </span>
-                          ))}
-                          {safeSpecialties.length > 2 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                              +{safeSpecialties.length - 2} más
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs text-gray-400">
-                      {priest.user?.email || 'Sin email'}
-                    </span>
-                    <ChevronRightIcon className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {filteredPriests.length === 0 && (
-          <div className="text-center py-12">
-            <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No se encontraron sacerdotes
-            </h3>
-            <p className="text-gray-600">
-              Intenta ajustar los filtros de búsqueda
-            </p>
-          </div>
-        )}
-
-        {/* Modal */}
-        {selectedPriest && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center space-x-4">
-                  <Image
-                    src={getPriestProfileImage(selectedPriest.profileImage)}
-                    alt={`${selectedPriest.firstName || ''} ${selectedPriest.lastName || ''}`}
-                    width={64}
-                    height={64}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {formatPriestName(selectedPriest.firstName || '', selectedPriest.lastName || '')}
-                    </h3>
-                    <p className="text-gray-600">{selectedPriest.user?.email || 'Sin email'}</p>
-                    {selectedPriest.ordainedDate && (
-                      <p className="text-sm text-blue-600 font-medium">
-                        {calculateOrdinationTime(selectedPriest.ordainedDate)} de ordenación
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedPriest(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {selectedPriest.parish && (
-                  <div className="flex items-center text-gray-600">
-                    <MapPinIcon className="h-5 w-5 mr-3 text-gray-400" />
-                    <div>
-                      <span className="font-medium">Parroquia:</span>
-                      <span className="ml-2">{selectedPriest.parish.name}, {selectedPriest.parish.city?.name || 'Ciudad no especificada'}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center text-gray-600">
-                  <PhoneIcon className="h-5 w-5 mr-3 text-gray-400" />
-                  <div>
-                    <span className="font-medium">Teléfono:</span>
-                    <span className="ml-2">{selectedPriest.phone || 'No especificado'}</span>
-                  </div>
-                </div>
-
-                {selectedPriest.ordainedDate && (
-                  <div className="flex items-center text-gray-600">
-                    <CalendarIcon className="h-5 w-5 mr-3 text-gray-400" />
-                    <div>
-                      <span className="font-medium">Fecha de ordenación:</span>
-                      <span className="ml-2">
-                        {new Date(selectedPriest.ordainedDate).toLocaleDateString('es-ES')}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {getSafeSpecialties(selectedPriest.specialties).length > 0 && (
-                  <div className="flex items-start text-gray-600">
-                    <UserGroupIcon className="h-5 w-5 mr-3 text-gray-400 mt-1" />
-                    <div>
-                      <span className="font-medium">Especialidades ministeriales:</span>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {getSafeSpecialties(selectedPriest.specialties).map((specialty, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {specialty}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 pt-4 border-t">
-                <button
-                  onClick={() => setSelectedPriest(null)}
-                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  Cerrar
-                </button>
-              </div>
+            {/* Results count */}
+            <div className="text-center sm:text-left">
+              <p className="text-gray-600 text-sm sm:text-base">
+                {searchTerm || parishFilter 
+                  ? `${filteredPriests.length} sacerdote${filteredPriests.length !== 1 ? 's' : ''} encontrado${filteredPriests.length !== 1 ? 's' : ''}` 
+                  : `${filteredPriests.length} sacerdotes en total`}
+              </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Priests Directory */}
+      <div className="max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
+        {filteredPriests.length === 0 ? (
+          <div className="text-center py-8 sm:py-12">
+            <div className="text-gray-400 mb-4">
+              <MagnifyingGlassIcon className="h-12 w-12 sm:h-16 sm:w-16 mx-auto" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+              No se encontraron sacerdotes
+            </h3>
+            <p className="text-gray-600 text-sm sm:text-base">
+              Intenta ajustar los filtros de búsqueda para encontrar más resultados.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {filteredPriests.map((priest) => (
+              <div
+                key={priest.id}
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 sm:p-6"
+              >
+                {/* Profile Image */}
+                <div className="text-center mb-4">
+                  {priest.profileImage ? (
+                    <Image
+                      src={priest.profileImage}
+                      alt={`${priest.firstName} ${priest.lastName}`}
+                      width={80}
+                      height={80}
+                      className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-lg sm:text-xl">
+                        {priest.firstName.charAt(0)}{priest.lastName.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Name */}
+                <h3 className="text-center text-base sm:text-lg font-semibold text-gray-900 mb-3">
+                  P. {priest.firstName} {priest.lastName}
+                </h3>
+
+                {/* Contact Information */}
+                <div className="space-y-2 text-xs sm:text-sm">
+                  {priest.user?.email && (
+                    <div className="flex items-center space-x-2">
+                      <EnvelopeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <a
+                        href={`mailto:${priest.user.email}`}
+                        className="text-blue-600 hover:text-blue-800 break-all"
+                      >
+                        {priest.user.email}
+                      </a>
+                    </div>
+                  )}
+
+                  {priest.phone && (
+                    <div className="flex items-center space-x-2">
+                      <PhoneIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <a
+                        href={`tel:${priest.phone}`}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        {priest.phone}
+                      </a>
+                    </div>
+                  )}
+
+                  {priest.parish && (
+                    <div className="flex items-start space-x-2">
+                      <MapPinIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-gray-600">{priest.parish.name}</p>
+                        <p className="text-gray-500">{priest.parish.city?.name}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {priest.ordainedDate && (
+                    <div className="flex items-start space-x-2">
+                      <CalendarIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-gray-600">Ordenación:</p>
+                        <p className="text-gray-500">{formatDate(priest.ordainedDate)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Specialties */}
+                {priest.specialties && getSafeSpecialties(priest.specialties).length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Especialidades:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {getSafeSpecialties(priest.specialties).slice(0, 3).map((specialty, index) => (
+                        <span
+                          key={index}
+                          className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                        >
+                          {specialty.specialty?.name || specialty}
+                        </span>
+                      ))}
+                      {getSafeSpecialties(priest.specialties).length > 3 && (
+                        <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                          +{getSafeSpecialties(priest.specialties).length - 3} más
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Biography preview */}
+                {priest.biography && (
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <p className="text-xs sm:text-sm text-gray-600 line-clamp-3">
+                      {priest.biography.substring(0, 100)}
+                      {priest.biography.length > 100 && '...'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6">
+        <div className="flex flex-col space-y-2">
+          <Link
+            href="/profile"
+            className="inline-flex items-center justify-center h-12 w-12 sm:h-14 sm:w-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+            title="Mi Perfil"
+          >
+            <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </Link>
+        </div>
       </div>
     </div>
   )

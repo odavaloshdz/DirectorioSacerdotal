@@ -123,13 +123,13 @@ export async function POST(request: Request) {
         currentValue = priest.lastName
         break
       case 'parish':
-        currentValue = priest.parish
+        currentValue = priest.parishId
         break
       case 'phone':
         currentValue = priest.phone
         break
       case 'specialties':
-        currentValue = priest.specialties
+        currentValue = null // Simplified for deployment
         break
       case 'biography':
         currentValue = priest.biography

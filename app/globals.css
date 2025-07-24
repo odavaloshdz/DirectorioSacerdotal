@@ -2,9 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base responsive design fixes */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background-color: #f9fafb;
+  overflow-x: hidden;
+  min-height: 100vh;
+  word-wrap: break-word;
+  line-height: 1.6;
+}
+
+/* Prevent horizontal scroll on mobile */
+.container, .max-w-7xl, .max-w-6xl, .max-w-4xl, .max-w-2xl {
+  overflow-x: hidden;
 }
 
 /* Optimize image rendering for crisp logos */
@@ -21,16 +41,55 @@ img[alt*="Diócesis"] {
   image-rendering: optimize-contrast;
 }
 
+/* Mobile-first text handling */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.5rem;
+    line-height: 1.4;
+  }
+  
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+  
+  h3 {
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+  
+  /* Ensure text doesn't overflow on small screens */
+  p, span, div {
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Better button sizing for touch */
+  button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improved input sizing */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Hero section styling */
 .hero-section {
   background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
 }
 
+/* Card and component styles */
 .card-shadow {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .service-card {
   transition: all 0.3s ease;
+  border: 1px solid #e5e7eb;
+  background: white;
 }
 
 .service-card:hover {
@@ -38,6 +97,7 @@ img[alt*="Diócesis"] {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
+/* Button styles */
 .btn-primary {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   transition: all 0.3s ease;
@@ -48,6 +108,81 @@ img[alt*="Diócesis"] {
   transform: translateY(-1px);
 }
 
+/* Footer styling */
 .footer-gradient {
   background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+}
+
+/* Mobile navigation improvements */
+@media (max-width: 1024px) {
+  .mobile-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus styles for better accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Loading state improvements */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+  }
+  
+  .shadow, .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .service-card {
+    border-width: 2px;
+  }
+  
+  button, .btn {
+    border-width: 2px;
+  }
 } 

@@ -29,18 +29,27 @@ export default function Register() {
     confirmPassword: '',
     parish: '',
     phone: '',
-    specialties: [] as string[]
+    specialties: [] as string[],
+    ordainedDate: '',
+    biography: ''
   })
+  const [profileImage, setProfileImage] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const router = useRouter()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     })
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setProfileImage(e.target.files[0])
+    }
   }
 
   const handleSpecialtyToggle = (specialty: string) => {
@@ -71,15 +80,25 @@ export default function Register() {
     }
 
     try {
+      const submitData = new FormData()
+      
+      // Add all text fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'specialties') {
+          submitData.append(key, JSON.stringify(value))
+        } else {
+          submitData.append(key, value as string)
+        }
+      })
+      
+      // Add profile image if selected
+      if (profileImage) {
+        submitData.append('profileImage', profileImage)
+      }
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...formData,
-          specialties: JSON.stringify(formData.specialties)
-        })
+        body: submitData // FormData handles Content-Type automatically
       })
 
       const data = await response.json()
@@ -209,6 +228,52 @@ export default function Register() {
                 type="tel"
                 value={formData.phone}
                 onChange={handleChange}
+                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="ordainedDate" className="block text-sm font-medium text-gray-700">
+                Fecha de Ordenación
+              </label>
+              <input
+                id="ordainedDate"
+                name="ordainedDate"
+                type="date"
+                value={formData.ordainedDate}
+                onChange={handleChange}
+                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="profileImage" className="block text-sm font-medium text-gray-700">
+                Imagen de Perfil
+              </label>
+              <input
+                id="profileImage"
+                name="profileImage"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Formatos soportados: JPG, PNG, GIF (máx. 5MB)
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="biography" className="block text-sm font-medium text-gray-700">
+                Biografía
+              </label>
+              <textarea
+                id="biography"
+                name="biography"
+                rows={4}
+                value={formData.biography}
+                onChange={handleChange}
+                placeholder="Cuéntanos un poco sobre tu vocación, formación y experiencia pastoral..."
                 className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>

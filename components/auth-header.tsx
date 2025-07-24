@@ -66,6 +66,15 @@ export function AuthHeader() {
                   </Link>
                 )}
 
+                {(session.user as any)?.role === 'PRIEST' && (session.user as any)?.priest?.status === 'APPROVED' && (
+                  <Link
+                    href="/profile"
+                    className="px-3 py-2 text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    Mi Perfil
+                  </Link>
+                )}
+
                 <Link
                   href="/help"
                   className="px-3 py-2 text-sm text-gray-600 hover:text-gray-700"

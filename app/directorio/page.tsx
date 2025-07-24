@@ -286,18 +286,17 @@ export default function DirectorioPage() {
                   </div>
                 </div>
               </div>
-              )
-            })}
+            )})}
           </div>
         )}
 
         {/* Priest Detail Modal */}
         {selectedPriest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="bg-white rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-xl font-bold text-gray-900">
-                  P. {selectedPriest.firstName} {selectedPriest.lastName}
+                  {formatPriestName(selectedPriest.firstName, selectedPriest.lastName)}
                 </h3>
                 <button
                   onClick={() => setSelectedPriest(null)}
@@ -311,9 +310,20 @@ export default function DirectorioPage() {
 
               <div className="space-y-4">
                 <div className="text-center">
-                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <UserGroupIcon className="h-10 w-10 text-blue-600" />
+                  <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-3">
+                    <Image
+                      src={getPriestProfileImage(selectedPriest.profileImage)}
+                      alt={`${selectedPriest.firstName} ${selectedPriest.lastName}`}
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
+                  {selectedPriest.ordainedDate && (
+                    <p className="text-sm text-blue-600 font-medium">
+                      {calculateOrdinationTime(selectedPriest.ordainedDate)} de ordenación
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -336,11 +346,11 @@ export default function DirectorioPage() {
                     </div>
                   )}
 
-                  {selectedPriest.specialties && (
+                  {parseSpecialties(selectedPriest.specialties).length > 0 && (
                     <div className="py-2">
                       <span className="font-medium text-gray-700 block mb-2">Especialidades:</span>
                       <div className="flex flex-wrap gap-2">
-                        {JSON.parse(selectedPriest.specialties).map((specialty: string, index: number) => (
+                        {parseSpecialties(selectedPriest.specialties).map((specialty: string, index: number) => (
                           <span
                             key={index}
                             className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm"
@@ -349,6 +359,13 @@ export default function DirectorioPage() {
                           </span>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {selectedPriest.biography && (
+                    <div className="py-2">
+                      <span className="font-medium text-gray-700 block mb-2">Biografía:</span>
+                      <p className="text-gray-600 text-sm leading-relaxed">{selectedPriest.biography}</p>
                     </div>
                   )}
                 </div>

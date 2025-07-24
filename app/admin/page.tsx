@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'manage' | 'catalogs' | 'suggestions'>('overview')
+  const [pendingSuggestionsCount, setPendingSuggestionsCount] = useState(0)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -65,9 +66,10 @@ export default function AdminPage() {
 
   const fetchData = async () => {
     try {
-      const [priestsResponse, statsResponse] = await Promise.all([
+      const [priestsResponse, statsResponse, suggestionsResponse] = await Promise.all([
         fetch('/api/admin/pending-priests'),
-        fetch('/api/admin/stats')
+        fetch('/api/admin/stats'),
+        fetch('/api/admin/suggestions')
       ])
 
       if (priestsResponse.ok) {
@@ -78,6 +80,12 @@ export default function AdminPage() {
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
         setStats(statsData.stats)
+      }
+
+      if (suggestionsResponse.ok) {
+        const suggestionsData = await suggestionsResponse.json()
+        const pendingCount = suggestionsData.suggestions.filter((s: any) => s.status === 'PENDING').length
+        setPendingSuggestionsCount(pendingCount)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -180,7 +188,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('suggestions')}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`relative px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     activeTab === 'suggestions'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
@@ -188,6 +196,11 @@ export default function AdminPage() {
                 >
                   <ChatBubbleBottomCenterTextIcon className="h-4 w-4 inline mr-2" />
                   Sugerencias
+                  {pendingSuggestionsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingSuggestionsCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

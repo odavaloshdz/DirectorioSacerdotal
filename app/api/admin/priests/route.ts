@@ -138,17 +138,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create priest record
+    // Create priest record (simplified for deployment)
     const priest = await prisma.priest.create({
       data: {
         userId: user.id,
         firstName,
         lastName,
-        // TODO: Fix parish and specialties relationships after deployment
         phone: phone || null,
         ordainedDate: ordainedDate ? new Date(ordainedDate) : null,
         biography: biography || null,
-        profileImage: profileImagePath,
+        profileImage: profileImagePath || null,
         status: status as any,
         approvedAt: status === 'APPROVED' ? new Date() : null,
         approvedBy: status === 'APPROVED' ? (session.user as any)?.id : null

@@ -48,10 +48,12 @@ export async function GET() {
     await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS "users" (
         "id" TEXT NOT NULL,
+        "name" TEXT,
         "email" TEXT NOT NULL,
-        "password" TEXT NOT NULL,
+        "emailVerified" TIMESTAMP(3),
+        "password" TEXT,
+        "image" TEXT,
         "role" "Role" NOT NULL DEFAULT 'USER',
-        "isActive" BOOLEAN NOT NULL DEFAULT true,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "users_pkey" PRIMARY KEY ("id")
@@ -163,6 +165,14 @@ export async function GET() {
       );
     `
     
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS "verification_tokens" (
+        "identifier" TEXT NOT NULL,
+        "token" TEXT NOT NULL,
+        "expires" TIMESTAMP(3) NOT NULL
+      );
+    `
+    
     console.log('📋 Creando índices...')
     
     // Create indexes
@@ -171,6 +181,8 @@ export async function GET() {
     try { await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "sessions_sessionToken_key" ON "sessions"("sessionToken");` } catch (e) {}
     try { await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "priests_userId_key" ON "priests"("userId");` } catch (e) {}
     try { await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "priestSpecialties_priestId_specialtyId_key" ON "priestSpecialties"("priestId", "specialtyId");` } catch (e) {}
+    try { await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "verification_tokens_token_key" ON "verification_tokens"("token");` } catch (e) {}
+    try { await prisma.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "verification_tokens_identifier_token_key" ON "verification_tokens"("identifier", "token");` } catch (e) {}
     
     console.log('📋 Creando relaciones...')
     

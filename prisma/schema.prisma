@@ -26,15 +26,67 @@ model User {
   priest   Priest?
 }
 
+model City {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  state     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parishes Parish[]
+
+  @@map("cities")
+}
+
+model Parish {
+  id        String   @id @default(cuid())
+  name      String
+  cityId    String
+  address   String?
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  city    City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  priests Priest[]
+
+  @@unique([name, cityId])
+  @@map("parishes")
+}
+
+model Specialty {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  priests PriestSpecialty[]
+
+  @@map("specialties")
+}
+
+model PriestSpecialty {
+  id          String @id @default(cuid())
+  priestId    String
+  specialtyId String
+
+  priest    Priest    @relation(fields: [priestId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  @@unique([priestId, specialtyId])
+  @@map("priest_specialties")
+}
+
 model Priest {
   id              String       @id @default(cuid())
   userId          String       @unique
   firstName       String
   lastName        String
   ordainedDate    DateTime?
-  parish          String?
+  parishId        String?      // Now references Parish model
   phone           String?
-  specialties     String?      // JSON string with array of specialties
   biography       String?
   profileImage    String?      // URL/path to profile image
   status          PriestStatus @default(PENDING)
@@ -43,8 +95,10 @@ model Priest {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  suggestions ProfileSuggestion[]
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parish       Parish?             @relation(fields: [parishId], references: [id], onDelete: SetNull)
+  specialties  PriestSpecialty[]
+  suggestions  ProfileSuggestion[]
 
   @@map("priests")
 }

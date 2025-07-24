@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Directorio Sacerdotal - Sistema de gestión y directorio de sacerdotes",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

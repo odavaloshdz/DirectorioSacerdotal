@@ -13,6 +13,5 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["iad1"],
-  "nodeVersion": "22.x"
+  "regions": ["iad1"]
 } 

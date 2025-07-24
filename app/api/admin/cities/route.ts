@@ -15,31 +15,35 @@ export async function GET() {
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden acceder' },
         { status: 403 }
       )
     }
 
     const cities = await prisma.city.findMany({
+      orderBy: { name: 'asc' },
       include: {
-        parishes: {
+        _count: {
           select: {
-            id: true,
-            name: true
+            parishes: true
           }
         }
-      },
-      orderBy: {
-        name: 'asc'
       }
     })
 
     return NextResponse.json({
-      cities
+      success: true,
+      cities: cities.map(city => ({
+        id: city.id,
+        name: city.name,
+        state: city.state,
+        createdAt: city.createdAt,
+        parishCount: city._count.parishes
+      }))
     })
+
   } catch (error) {
     console.error('Error fetching cities:', error)
     return NextResponse.json(
@@ -61,10 +65,9 @@ export async function POST(request: Request) {
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden crear ciudades' },
         { status: 403 }
       )
     }
@@ -78,29 +81,31 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if city already exists
+    // Verificar si la ciudad ya existe
     const existingCity = await prisma.city.findUnique({
       where: { name }
     })
 
     if (existingCity) {
       return NextResponse.json(
-        { error: 'Ya existe una ciudad con este nombre' },
+        { error: 'Ya existe una ciudad con ese nombre' },
         { status: 400 }
       )
     }
 
     const city = await prisma.city.create({
       data: {
-        name,
-        state
+        name: name.trim(),
+        state: state.trim()
       }
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Ciudad creada exitosamente',
       city
     })
+
   } catch (error) {
     console.error('Error creating city:', error)
     return NextResponse.json(

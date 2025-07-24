@@ -15,15 +15,15 @@ export async function GET() {
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden acceder' },
         { status: 403 }
       )
     }
 
     const parishes = await prisma.parish.findMany({
+      orderBy: { name: 'asc' },
       include: {
         city: {
           select: {
@@ -32,22 +32,27 @@ export async function GET() {
             state: true
           }
         },
-        priests: {
+        _count: {
           select: {
-            id: true,
-            firstName: true,
-            lastName: true
+            priests: true
           }
         }
-      },
-      orderBy: {
-        name: 'asc'
       }
     })
 
     return NextResponse.json({
-      parishes
+      success: true,
+      parishes: parishes.map(parish => ({
+        id: parish.id,
+        name: parish.name,
+        address: parish.address,
+        phone: parish.phone,
+        createdAt: parish.createdAt,
+        city: parish.city,
+        priestCount: parish._count.priests
+      }))
     })
+
   } catch (error) {
     console.error('Error fetching parishes:', error)
     return NextResponse.json(
@@ -69,15 +74,14 @@ export async function POST(request: Request) {
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden crear parroquias' },
         { status: 403 }
       )
     }
 
-    const { name, cityId, address, phone, email } = await request.json()
+    const { name, address, phone, cityId } = await request.json()
 
     if (!name || !cityId) {
       return NextResponse.json(
@@ -86,32 +90,44 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if parish already exists in the same city
+    // Verificar si la ciudad existe
+    const city = await prisma.city.findUnique({
+      where: { id: cityId }
+    })
+
+    if (!city) {
+      return NextResponse.json(
+        { error: 'Ciudad no encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Verificar si la parroquia ya existe en esa ciudad
     const existingParish = await prisma.parish.findFirst({
       where: {
-        name,
-        cityId
+        name: name.trim(),
+        cityId: cityId
       }
     })
 
     if (existingParish) {
       return NextResponse.json(
-        { error: 'Ya existe una parroquia con este nombre en esta ciudad' },
+        { error: 'Ya existe una parroquia con ese nombre en esta ciudad' },
         { status: 400 }
       )
     }
 
     const parish = await prisma.parish.create({
       data: {
-        name,
-        cityId,
-        address: address || null,
-        phone: phone || null,
-        email: email || null
+        name: name.trim(),
+        address: address?.trim() || null,
+        phone: phone?.trim() || null,
+        cityId: cityId
       },
       include: {
         city: {
           select: {
+            id: true,
             name: true,
             state: true
           }
@@ -120,9 +136,11 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Parroquia creada exitosamente',
       parish
     })
+
   } catch (error) {
     console.error('Error creating parish:', error)
     return NextResponse.json(

@@ -18,15 +18,14 @@ export async function PUT(
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden editar parroquias' },
         { status: 403 }
       )
     }
 
-    const { name, cityId, address, phone, email } = await request.json()
+    const { name, address, phone, cityId } = await request.json()
 
     if (!name || !cityId) {
       return NextResponse.json(
@@ -35,7 +34,7 @@ export async function PUT(
       )
     }
 
-    // Check if parish exists
+    // Verificar si la parroquia existe
     const existingParish = await prisma.parish.findUnique({
       where: { id: params.id }
     })
@@ -47,34 +46,48 @@ export async function PUT(
       )
     }
 
-    // Check if another parish with same name exists in same city (excluding current)
+    // Verificar si la ciudad existe
+    const city = await prisma.city.findUnique({
+      where: { id: cityId }
+    })
+
+    if (!city) {
+      return NextResponse.json(
+        { error: 'Ciudad no encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Verificar si ya existe otra parroquia con el mismo nombre en esa ciudad
     const duplicateParish = await prisma.parish.findFirst({
       where: {
-        name,
-        cityId,
-        id: { not: params.id }
+        name: name.trim(),
+        cityId: cityId,
+        NOT: {
+          id: params.id
+        }
       }
     })
 
     if (duplicateParish) {
       return NextResponse.json(
-        { error: 'Ya existe otra parroquia con este nombre en esta ciudad' },
+        { error: 'Ya existe otra parroquia con ese nombre en esta ciudad' },
         { status: 400 }
       )
     }
 
-    const parish = await prisma.parish.update({
+    const updatedParish = await prisma.parish.update({
       where: { id: params.id },
       data: {
-        name,
-        cityId,
-        address: address || null,
-        phone: phone || null,
-        email: email || null
+        name: name.trim(),
+        address: address?.trim() || null,
+        phone: phone?.trim() || null,
+        cityId: cityId
       },
       include: {
         city: {
           select: {
+            id: true,
             name: true,
             state: true
           }
@@ -83,9 +96,11 @@ export async function PUT(
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Parroquia actualizada exitosamente',
-      parish
+      parish: updatedParish
     })
+
   } catch (error) {
     console.error('Error updating parish:', error)
     return NextResponse.json(
@@ -110,30 +125,32 @@ export async function DELETE(
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden eliminar parroquias' },
         { status: 403 }
       )
     }
 
-    // Check if parish has priests
-    const parish = await prisma.parish.findUnique({
+    // Verificar si la parroquia existe
+    const existingParish = await prisma.parish.findUnique({
       where: { id: params.id },
-      include: { priests: true }
+      include: {
+        priests: true
+      }
     })
 
-    if (!parish) {
+    if (!existingParish) {
       return NextResponse.json(
         { error: 'Parroquia no encontrada' },
         { status: 404 }
       )
     }
 
-    if (parish.priests.length > 0) {
+    // Verificar si la parroquia tiene sacerdotes asociados
+    if (existingParish.priests.length > 0) {
       return NextResponse.json(
-        { error: 'No se puede eliminar la parroquia porque tiene sacerdotes asignados' },
+        { error: 'No se puede eliminar la parroquia porque tiene sacerdotes asociados' },
         { status: 400 }
       )
     }
@@ -143,8 +160,10 @@ export async function DELETE(
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Parroquia eliminada exitosamente'
     })
+
   } catch (error) {
     console.error('Error deleting parish:', error)
     return NextResponse.json(

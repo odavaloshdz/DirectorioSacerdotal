@@ -291,48 +291,54 @@ export async function DELETE(
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden eliminar sacerdotes' },
         { status: 403 }
       )
     }
 
-    // Get priest with user info
-    const priest = await prisma.priest.findUnique({
+    // Verificar si el sacerdote existe
+    const existingPriest = await prisma.priest.findUnique({
       where: { id: params.id },
-      include: { user: true }
+      include: {
+        user: true,
+        specialties: true,
+        suggestions: true
+      }
     })
 
-    if (!priest) {
+    if (!existingPriest) {
       return NextResponse.json(
         { error: 'Sacerdote no encontrado' },
         { status: 404 }
       )
     }
 
-    // Delete priest and user in a transaction
-    await prisma.$transaction(async (tx) => {
-      // Delete all related records first
-      await tx.profileSuggestion.deleteMany({
-        where: { priestId: params.id }
-      })
+    // Eliminar relaciones primero
+    await prisma.priestSpecialty.deleteMany({
+      where: { priestId: params.id }
+    })
 
-      // Delete priest record
-      await tx.priest.delete({
-        where: { id: params.id }
-      })
+    await prisma.profileSuggestion.deleteMany({
+      where: { priestId: params.id }
+    })
 
-      // Delete user record (this will cascade)
-      await tx.user.delete({
-        where: { id: priest.userId }
-      })
+    // Eliminar el sacerdote
+    await prisma.priest.delete({
+      where: { id: params.id }
+    })
+
+    // Eliminar el usuario asociado
+    await prisma.user.delete({
+      where: { id: existingPriest.userId }
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Sacerdote eliminado exitosamente'
     })
+
   } catch (error) {
     console.error('Error deleting priest:', error)
     return NextResponse.json(

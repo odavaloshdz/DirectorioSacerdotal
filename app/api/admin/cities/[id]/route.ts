@@ -18,10 +18,9 @@ export async function PUT(
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden editar ciudades' },
         { status: 403 }
       )
     }
@@ -35,7 +34,7 @@ export async function PUT(
       )
     }
 
-    // Check if city exists
+    // Verificar si la ciudad existe
     const existingCity = await prisma.city.findUnique({
       where: { id: params.id }
     })
@@ -47,30 +46,37 @@ export async function PUT(
       )
     }
 
-    // Check if another city with same name exists (excluding current)
+    // Verificar si el nuevo nombre ya existe (excepto en la ciudad actual)
     const duplicateCity = await prisma.city.findFirst({
       where: {
-        name,
-        id: { not: params.id }
+        name: name.trim(),
+        NOT: {
+          id: params.id
+        }
       }
     })
 
     if (duplicateCity) {
       return NextResponse.json(
-        { error: 'Ya existe otra ciudad con este nombre' },
+        { error: 'Ya existe otra ciudad con ese nombre' },
         { status: 400 }
       )
     }
 
-    const city = await prisma.city.update({
+    const updatedCity = await prisma.city.update({
       where: { id: params.id },
-      data: { name, state }
+      data: {
+        name: name.trim(),
+        state: state.trim()
+      }
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Ciudad actualizada exitosamente',
-      city
+      city: updatedCity
     })
+
   } catch (error) {
     console.error('Error updating city:', error)
     return NextResponse.json(
@@ -95,28 +101,30 @@ export async function DELETE(
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden eliminar ciudades' },
         { status: 403 }
       )
     }
 
-    // Check if city has parishes
-    const city = await prisma.city.findUnique({
+    // Verificar si la ciudad existe
+    const existingCity = await prisma.city.findUnique({
       where: { id: params.id },
-      include: { parishes: true }
+      include: {
+        parishes: true
+      }
     })
 
-    if (!city) {
+    if (!existingCity) {
       return NextResponse.json(
         { error: 'Ciudad no encontrada' },
         { status: 404 }
       )
     }
 
-    if (city.parishes.length > 0) {
+    // Verificar si la ciudad tiene parroquias asociadas
+    if (existingCity.parishes.length > 0) {
       return NextResponse.json(
         { error: 'No se puede eliminar la ciudad porque tiene parroquias asociadas' },
         { status: 400 }
@@ -128,8 +136,10 @@ export async function DELETE(
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Ciudad eliminada exitosamente'
     })
+
   } catch (error) {
     console.error('Error deleting city:', error)
     return NextResponse.json(

@@ -18,10 +18,9 @@ export async function PUT(
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden editar especialidades' },
         { status: 403 }
       )
     }
@@ -35,7 +34,7 @@ export async function PUT(
       )
     }
 
-    // Check if specialty exists
+    // Verificar si la especialidad existe
     const existingSpecialty = await prisma.specialty.findUnique({
       where: { id: params.id }
     })
@@ -47,33 +46,37 @@ export async function PUT(
       )
     }
 
-    // Check if another specialty with same name exists (excluding current)
+    // Verificar si el nuevo nombre ya existe (excepto en la especialidad actual)
     const duplicateSpecialty = await prisma.specialty.findFirst({
       where: {
-        name,
-        id: { not: params.id }
+        name: name.trim(),
+        NOT: {
+          id: params.id
+        }
       }
     })
 
     if (duplicateSpecialty) {
       return NextResponse.json(
-        { error: 'Ya existe otra especialidad con este nombre' },
+        { error: 'Ya existe otra especialidad con ese nombre' },
         { status: 400 }
       )
     }
 
-    const specialty = await prisma.specialty.update({
+    const updatedSpecialty = await prisma.specialty.update({
       where: { id: params.id },
       data: {
-        name,
-        description: description || null
+        name: name.trim(),
+        description: description?.trim() || null
       }
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Especialidad actualizada exitosamente',
-      specialty
+      specialty: updatedSpecialty
     })
+
   } catch (error) {
     console.error('Error updating specialty:', error)
     return NextResponse.json(
@@ -98,30 +101,32 @@ export async function DELETE(
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden eliminar especialidades' },
         { status: 403 }
       )
     }
 
-    // Check if specialty has priests
-    const specialty = await prisma.specialty.findUnique({
+    // Verificar si la especialidad existe
+    const existingSpecialty = await prisma.specialty.findUnique({
       where: { id: params.id },
-      include: { priests: true }
+      include: {
+        priests: true
+      }
     })
 
-    if (!specialty) {
+    if (!existingSpecialty) {
       return NextResponse.json(
         { error: 'Especialidad no encontrada' },
         { status: 404 }
       )
     }
 
-    if (specialty.priests.length > 0) {
+    // Verificar si la especialidad tiene sacerdotes asociados
+    if (existingSpecialty.priests.length > 0) {
       return NextResponse.json(
-        { error: 'No se puede eliminar la especialidad porque tiene sacerdotes asignados' },
+        { error: 'No se puede eliminar la especialidad porque tiene sacerdotes asociados' },
         { status: 400 }
       )
     }
@@ -131,8 +136,10 @@ export async function DELETE(
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Especialidad eliminada exitosamente'
     })
+
   } catch (error) {
     console.error('Error deleting specialty:', error)
     return NextResponse.json(

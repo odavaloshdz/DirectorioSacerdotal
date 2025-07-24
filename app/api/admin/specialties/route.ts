@@ -15,35 +15,35 @@ export async function GET() {
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden acceder' },
         { status: 403 }
       )
     }
 
     const specialties = await prisma.specialty.findMany({
+      orderBy: { name: 'asc' },
       include: {
-        priests: {
-          include: {
-            priest: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            }
+        _count: {
+          select: {
+            priests: true
           }
         }
-      },
-      orderBy: {
-        name: 'asc'
       }
     })
 
     return NextResponse.json({
-      specialties
+      success: true,
+      specialties: specialties.map(specialty => ({
+        id: specialty.id,
+        name: specialty.name,
+        description: specialty.description,
+        createdAt: specialty.createdAt,
+        priestCount: specialty._count.priests
+      }))
     })
+
   } catch (error) {
     console.error('Error fetching specialties:', error)
     return NextResponse.json(
@@ -65,10 +65,9 @@ export async function POST(request: Request) {
     }
 
     const userRole = (session.user as any)?.role
-
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solo administradores pueden acceder.' },
+        { error: 'Solo administradores pueden crear especialidades' },
         { status: 403 }
       )
     }
@@ -82,29 +81,31 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if specialty already exists
+    // Verificar si la especialidad ya existe
     const existingSpecialty = await prisma.specialty.findUnique({
-      where: { name }
+      where: { name: name.trim() }
     })
 
     if (existingSpecialty) {
       return NextResponse.json(
-        { error: 'Ya existe una especialidad con este nombre' },
+        { error: 'Ya existe una especialidad con ese nombre' },
         { status: 400 }
       )
     }
 
     const specialty = await prisma.specialty.create({
       data: {
-        name,
-        description: description || null
+        name: name.trim(),
+        description: description?.trim() || null
       }
     })
 
     return NextResponse.json({
+      success: true,
       message: 'Especialidad creada exitosamente',
       specialty
     })
+
   } catch (error) {
     console.error('Error creating specialty:', error)
     return NextResponse.json(

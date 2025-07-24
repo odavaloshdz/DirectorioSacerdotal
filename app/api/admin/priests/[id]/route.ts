@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { saveProfileImage } from '@/lib/file-upload'
+import { uploadProfileImage } from '@/lib/cloudinary'
 
 export async function GET(
   request: Request,
@@ -38,6 +38,27 @@ export async function GET(
             name: true,
             role: true,
             createdAt: true
+          }
+        },
+        parish: {
+          select: {
+            id: true,
+            name: true,
+            city: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
+        specialties: {
+          include: {
+            specialty: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         }
       }
@@ -92,9 +113,9 @@ export async function PUT(
     const password = formData.get('password') as string
     const firstName = formData.get('firstName') as string
     const lastName = formData.get('lastName') as string
-    const parish = formData.get('parish') as string
+    const parishId = formData.get('parishId') as string
     const phone = formData.get('phone') as string
-    const specialties = formData.get('specialties') as string
+    const specialtyIds = formData.get('specialtyIds') as string
     const ordainedDate = formData.get('ordainedDate') as string
     const biography = formData.get('biography') as string
     const status = formData.get('status') as string
@@ -103,7 +124,10 @@ export async function PUT(
     // Get existing priest
     const existingPriest = await prisma.priest.findUnique({
       where: { id: params.id },
-      include: { user: true }
+      include: { 
+        user: true,
+        specialties: true
+      }
     })
 
     if (!existingPriest) {
@@ -135,12 +159,22 @@ export async function PUT(
     }
 
     // Handle profile image upload
-    let profileImagePath: string | null = existingPriest.profileImage
+    let profileImageUrl: string | null = existingPriest.profileImage
     if (profileImageFile && profileImageFile.size > 0) {
       try {
-        profileImagePath = await saveProfileImage(profileImageFile, existingPriest.userId)
+        profileImageUrl = await uploadProfileImage(profileImageFile, existingPriest.userId)
       } catch (error) {
         console.error('Error uploading image:', error)
+      }
+    }
+
+    // Parse specialty IDs
+    let parsedSpecialtyIds: string[] = []
+    if (specialtyIds) {
+      try {
+        parsedSpecialtyIds = JSON.parse(specialtyIds)
+      } catch (error) {
+        console.error('Error parsing specialty IDs:', error)
       }
     }
 
@@ -160,12 +194,11 @@ export async function PUT(
     const priestUpdateData: any = {
       firstName,
       lastName,
-      parish: parish || null,
+      parishId: parishId || null,
       phone: phone || null,
-      specialties: specialties || null,
       ordainedDate: ordainedDate ? new Date(ordainedDate) : null,
       biography: biography || null,
-      profileImage: profileImagePath,
+      profileImage: profileImageUrl,
       status: status as any,
     }
 
@@ -184,7 +217,7 @@ export async function PUT(
       })
 
       // Update priest
-      return await tx.priest.update({
+      const priest = await tx.priest.update({
         where: { id: params.id },
         data: priestUpdateData,
         include: {
@@ -196,9 +229,38 @@ export async function PUT(
               role: true,
               createdAt: true
             }
+          },
+          parish: {
+            select: {
+              id: true,
+              name: true,
+              city: {
+                select: {
+                  name: true
+                }
+              }
+            }
           }
         }
       })
+
+      // Update priest-specialty relationships
+      // First, delete existing relationships
+      await tx.priestSpecialty.deleteMany({
+        where: { priestId: params.id }
+      })
+
+      // Then, create new relationships
+      if (parsedSpecialtyIds.length > 0) {
+        await tx.priestSpecialty.createMany({
+          data: parsedSpecialtyIds.map(specialtyId => ({
+            priestId: params.id,
+            specialtyId
+          }))
+        })
+      }
+
+      return priest
     })
 
     return NextResponse.json({

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { saveProfileImage } from '@/lib/file-upload'
+import { uploadProfileImage } from '@/lib/cloudinary'
 
 export async function GET() {
   try {
@@ -34,6 +34,27 @@ export async function GET() {
             name: true,
             role: true,
             createdAt: true
+          }
+        },
+        parish: {
+          select: {
+            id: true,
+            name: true,
+            city: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
+        specialties: {
+          include: {
+            specialty: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         }
       },
@@ -82,9 +103,9 @@ export async function POST(request: Request) {
     const password = formData.get('password') as string
     const firstName = formData.get('firstName') as string
     const lastName = formData.get('lastName') as string
-    const parish = formData.get('parish') as string
+    const parishId = formData.get('parishId') as string
     const phone = formData.get('phone') as string
-    const specialties = formData.get('specialties') as string
+    const specialtyIds = formData.get('specialtyIds') as string
     const ordainedDate = formData.get('ordainedDate') as string
     const biography = formData.get('biography') as string
     const status = formData.get('status') as string || 'PENDING'
@@ -129,29 +150,62 @@ export async function POST(request: Request) {
     })
 
     // Handle profile image upload
-    let profileImagePath: string | null = null
+    let profileImageUrl: string | null = null
     if (profileImageFile && profileImageFile.size > 0) {
       try {
-        profileImagePath = await saveProfileImage(profileImageFile, user.id)
+        profileImageUrl = await uploadProfileImage(profileImageFile, user.id)
       } catch (error) {
         console.error('Error uploading image:', error)
       }
     }
 
-    // Create priest record (simplified for deployment - profileImage added later)
+    // Parse specialty IDs
+    let parsedSpecialtyIds: string[] = []
+    if (specialtyIds) {
+      try {
+        parsedSpecialtyIds = JSON.parse(specialtyIds)
+      } catch (error) {
+        console.error('Error parsing specialty IDs:', error)
+      }
+    }
+
+    // Create priest record with all fields
     const priest = await prisma.priest.create({
       data: {
         userId: user.id,
         firstName,
         lastName,
+        parishId: parishId || null,
         phone: phone || null,
         ordainedDate: ordainedDate ? new Date(ordainedDate) : null,
         biography: biography || null,
+        profileImage: profileImageUrl,
         status: status as any,
         approvedAt: status === 'APPROVED' ? new Date() : null,
         approvedBy: status === 'APPROVED' ? (session.user as any)?.id : null
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            createdAt: true
+          }
+        }
       }
     })
+
+    // Create priest-specialty relationships
+    if (parsedSpecialtyIds.length > 0) {
+      await prisma.priestSpecialty.createMany({
+        data: parsedSpecialtyIds.map(specialtyId => ({
+          priestId: priest.id,
+          specialtyId
+        }))
+      })
+    }
 
     return NextResponse.json({
       message: 'Sacerdote creado exitosamente',

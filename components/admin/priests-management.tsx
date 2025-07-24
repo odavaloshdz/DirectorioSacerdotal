@@ -10,15 +10,14 @@ import {
   UserCircleIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline'
-import { calculateOrdinationTime, formatPriestName, getPriestProfileImage, parseSpecialties } from '@/lib/utils'
+import { calculateOrdinationTime, formatPriestName, getPriestProfileImage } from '@/lib/utils'
 
 interface Priest {
   id: string
   firstName: string
   lastName: string
-  parish: string | null
+  parishId: string | null
   phone: string | null
-  specialties: string | null
   profileImage: string | null
   ordainedDate: string | null
   biography: string | null
@@ -30,22 +29,34 @@ interface Priest {
     name: string
     role: string
   }
+  parish?: {
+    id: string
+    name: string
+    city: {
+      name: string
+    }
+  }
+  specialties?: Array<{
+    specialty: {
+      id: string
+      name: string
+    }
+  }>
 }
 
-const availableSpecialties = [
-  'Dirección Espiritual',
-  'Liturgia',
-  'Catequesis',
-  'Juventud',
-  'Matrimonios',
-  'Familia',
-  'Formación',
-  'Misiones',
-  'Pastoral Social',
-  'Educación',
-  'Música Sacra',
-  'Arte Sacro'
-]
+interface Parish {
+  id: string
+  name: string
+  city: {
+    name: string
+  }
+}
+
+interface Specialty {
+  id: string
+  name: string
+  description?: string
+}
 
 export function PriestsManagement() {
   const [priests, setPriests] = useState<Priest[]>([])
@@ -69,8 +80,8 @@ export function PriestsManagement() {
     status: 'PENDING'
   })
   const [profileImage, setProfileImage] = useState<File | null>(null)
-  const [parishes, setParishes] = useState<any[]>([])
-  const [specialties, setSpecialties] = useState<any[]>([])
+  const [parishes, setParishes] = useState<Parish[]>([])
+  const [specialties, setSpecialties] = useState<Specialty[]>([])
   const [loadingCatalogs, setLoadingCatalogs] = useState(false)
 
   useEffect(() => {
@@ -78,9 +89,24 @@ export function PriestsManagement() {
     fetchCatalogs()
   }, [])
 
-  const fetchCatalogs = async () => {
-    setLoadingCatalogs(true)
+  const fetchPriests = async () => {
     try {
+      setLoading(true)
+      const response = await fetch('/api/admin/priests')
+      if (response.ok) {
+        const data = await response.json()
+        setPriests(data.priests)
+      }
+    } catch (error) {
+      console.error('Error fetching priests:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchCatalogs = async () => {
+    try {
+      setLoadingCatalogs(true)
       const [parishesRes, specialtiesRes] = await Promise.all([
         fetch('/api/admin/parishes'),
         fetch('/api/admin/specialties')
@@ -99,20 +125,6 @@ export function PriestsManagement() {
       console.error('Error fetching catalogs:', error)
     } finally {
       setLoadingCatalogs(false)
-    }
-  }
-
-  const fetchPriests = async () => {
-    try {
-      const response = await fetch('/api/admin/priests')
-      if (response.ok) {
-        const data = await response.json()
-        setPriests(data.priests)
-      }
-    } catch (error) {
-      console.error('Error fetching priests:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -143,9 +155,9 @@ export function PriestsManagement() {
       lastName: priest.lastName,
       email: priest.user.email,
       password: '',
-      parishId: priest.parish || '',
+      parishId: priest.parishId || '',
       phone: priest.phone || '',
-      specialtyIds: [], // Simplified for deployment
+      specialtyIds: priest.specialties?.map(ps => ps.specialty.id) || [],
       ordainedDate: priest.ordainedDate ? priest.ordainedDate.split('T')[0] : '',
       biography: priest.biography || '',
       status: priest.status
@@ -249,20 +261,41 @@ export function PriestsManagement() {
   }
 
   const filteredPriests = priests.filter(priest => {
-    const matchesSearch = !searchTerm || 
-      `${priest.firstName} ${priest.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const searchMatch = 
+      priest.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      priest.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       priest.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      priest.parish?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = !statusFilter || priest.status === statusFilter
-    
-    return matchesSearch && matchesStatus
+      (priest.parish?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const statusMatch = statusFilter === '' || priest.status === statusFilter
+
+    return searchMatch && statusMatch
   })
+
+  const getStatusBadge = (status: string) => {
+    const statusStyles = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      APPROVED: 'bg-green-100 text-green-800',
+      REJECTED: 'bg-red-100 text-red-800'
+    }
+    
+    const statusLabels = {
+      PENDING: 'Pendiente',
+      APPROVED: 'Aprobado',
+      REJECTED: 'Rechazado'
+    }
+
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[status as keyof typeof statusStyles]}`}>
+        {statusLabels[status as keyof typeof statusLabels]}
+      </span>
+    )
+  }
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
       </div>
     )
   }
@@ -270,145 +303,115 @@ export function PriestsManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestión de Sacerdotes</h2>
-          <p className="text-gray-600">Administrar sacerdotes del directorio</p>
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">Gestión de Sacerdotes</h2>
         <button
           onClick={handleAddPriest}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
         >
-          <PlusIcon className="h-5 w-5 mr-2" />
+          <PlusIcon className="h-5 w-5" />
           Agregar Sacerdote
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, email o parroquia..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Todos los estados</option>
-            <option value="PENDING">Pendiente</option>
-            <option value="APPROVED">Aprobado</option>
-            <option value="REJECTED">Rechazado</option>
-          </select>
-
-          <div className="text-sm text-gray-600 flex items-center">
-            Total: {filteredPriests.length} sacerdotes
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="relative">
+          <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, email o parroquia..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">Todos los estados</option>
+          <option value="PENDING">Pendientes</option>
+          <option value="APPROVED">Aprobados</option>
+          <option value="REJECTED">Rechazados</option>
+        </select>
       </div>
 
-      {/* Table */}
-      <div className="bg-white shadow-sm rounded-lg border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sacerdote
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Parroquia
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ordenación
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPriests.map((priest) => (
-                <tr key={priest.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full overflow-hidden mr-4">
-                        <Image
-                          src={getPriestProfileImage(priest.profileImage)}
-                          alt={`${priest.firstName} ${priest.lastName}`}
-                          width={40}
-                          height={40}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {formatPriestName(priest.firstName, priest.lastName)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {priest.user.email}
-                        </div>
-                      </div>
+      {/* Priests Table */}
+      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul className="divide-y divide-gray-200">
+          {filteredPriests.map((priest) => (
+            <li key={priest.id} className="px-6 py-4 hover:bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 h-12 w-12">
+                    {priest.profileImage ? (
+                      <Image
+                        src={priest.profileImage}
+                        alt={`Foto de ${formatPriestName(priest.firstName, priest.lastName)}`}
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <UserCircleIcon className="h-12 w-12 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="ml-4">
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatPriestName(priest.firstName, priest.lastName)}
                     </div>
-                  </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {priest.parish || 'No asignada'}
-                    </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      priest.status === 'APPROVED' 
-                        ? 'bg-green-100 text-green-800'
-                        : priest.status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {priest.status === 'APPROVED' ? 'Aprobado' :
-                       priest.status === 'PENDING' ? 'Pendiente' : 'Rechazado'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {priest.ordainedDate ? calculateOrdinationTime(priest.ordainedDate) : 'No especificado'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEditPriest(priest)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeletePriest(priest)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                    <div className="text-sm text-gray-500">{priest.user.email}</div>
+                    <div className="text-sm text-gray-500">
+                      {priest.parish ? `${priest.parish.name}, ${priest.parish.city.name}` : 'Sin parroquia asignada'}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {priest.specialties && priest.specialties.length > 0 && (
+                      <div className="text-sm text-gray-500">
+                        Especialidades: {priest.specialties.map(ps => ps.specialty.name).join(', ')}
+                      </div>
+                    )}
+                    {priest.ordainedDate && (
+                      <div className="text-sm text-gray-500">
+                        Ordenado: {calculateOrdinationTime(priest.ordainedDate)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {getStatusBadge(priest.status)}
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEditPriest(priest)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      <PencilIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeletePriest(priest)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {filteredPriests.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No se encontraron sacerdotes
+          </div>
+        )}
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h3 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
                 {modalMode === 'add' ? 'Agregar Sacerdote' : 'Editar Sacerdote'}
               </h3>
               <button
@@ -419,7 +422,7 @@ export function PriestsManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -437,7 +440,7 @@ export function PriestsManagement() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Apellidos *
+                    Apellido *
                   </label>
                   <input
                     type="text"
@@ -466,7 +469,7 @@ export function PriestsManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contraseña {modalMode === 'edit' ? '(dejar vacío para mantener actual)' : '*'}
+                  Contraseña {modalMode === 'edit' ? '(dejar en blanco para mantener actual)' : '*'}
                 </label>
                 <input
                   type="password"
@@ -490,7 +493,7 @@ export function PriestsManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Seleccionar parroquia</option>
-                    {parishes.map(parish => (
+                    {parishes.map((parish) => (
                       <option key={parish.id} value={parish.id}>
                         {parish.name} - {parish.city.name}
                       </option>
@@ -510,6 +513,39 @@ export function PriestsManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Especialidades Ministeriales
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
+                  {specialties.map((specialty) => (
+                    <label key={specialty.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.specialtyIds.includes(specialty.id)}
+                        onChange={() => handleSpecialtyToggle(specialty.id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{specialty.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Biografía
+                </label>
+                <textarea
+                  name="biography"
+                  value={formData.biography}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe la formación y experiencia del sacerdote..."
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -555,52 +591,20 @@ export function PriestsManagement() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Especialidades
-                </label>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-3">
-                  {specialties.map(specialty => (
-                    <label key={specialty.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.specialtyIds.includes(specialty.id)}
-                        onChange={() => handleSpecialtyToggle(specialty.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="text-sm text-gray-700">{specialty.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Biografía
-                </label>
-                <textarea
-                  name="biography"
-                  value={formData.biography}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex space-x-3 pt-4">
+              <div className="flex justify-end space-x-4 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {submitting ? 'Guardando...' : modalMode === 'add' ? 'Crear Sacerdote' : 'Actualizar Sacerdote'}
+                  {submitting ? 'Guardando...' : (modalMode === 'add' ? 'Crear' : 'Actualizar')}
                 </button>
               </div>
             </form>

@@ -12,6 +12,7 @@ import {
   CogIcon
 } from '@heroicons/react/24/outline'
 import { PriestsManagement } from '@/components/admin/priests-management'
+import { CatalogManagement } from '@/components/admin/catalog-management'
 
 interface PendingPriest {
   id: string
@@ -41,7 +42,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'manage'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'manage' | 'catalogs'>('overview')
 
   useEffect(() => {
     if (status === 'loading') return
@@ -143,25 +144,36 @@ export default function AdminPage() {
               <div className="flex space-x-1">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     activeTab === 'overview'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <UserGroupIcon className="h-4 w-4 inline mr-2" />
-                  Resumen y Aprobaciones
+                  Resumen
                 </button>
                 <button
                   onClick={() => setActiveTab('manage')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     activeTab === 'manage'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <CogIcon className="h-4 w-4 inline mr-2" />
-                  Gestionar Sacerdotes
+                  Sacerdotes
+                </button>
+                <button
+                  onClick={() => setActiveTab('catalogs')}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === 'catalogs'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <ExclamationTriangleIcon className="h-4 w-4 inline mr-2" />
+                  Catálogos
                 </button>
               </div>
             </div>
@@ -298,8 +310,10 @@ export default function AdminPage() {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'manage' ? (
           <PriestsManagement />
+        ) : (
+          <CatalogManagement />
         )}
       </div>
     </div>

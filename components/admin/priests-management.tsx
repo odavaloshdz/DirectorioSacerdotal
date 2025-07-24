@@ -61,18 +61,46 @@ export function PriestsManagement() {
     lastName: '',
     email: '',
     password: '',
-    parish: '',
+    parishId: '',
     phone: '',
-    specialties: [] as string[],
+    specialtyIds: [] as string[],
     ordainedDate: '',
     biography: '',
     status: 'PENDING'
   })
   const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [parishes, setParishes] = useState<any[]>([])
+  const [specialties, setSpecialties] = useState<any[]>([])
+  const [loadingCatalogs, setLoadingCatalogs] = useState(false)
 
   useEffect(() => {
     fetchPriests()
+    fetchCatalogs()
   }, [])
+
+  const fetchCatalogs = async () => {
+    setLoadingCatalogs(true)
+    try {
+      const [parishesRes, specialtiesRes] = await Promise.all([
+        fetch('/api/admin/parishes'),
+        fetch('/api/admin/specialties')
+      ])
+
+      if (parishesRes.ok) {
+        const parishesData = await parishesRes.json()
+        setParishes(parishesData.parishes)
+      }
+
+      if (specialtiesRes.ok) {
+        const specialtiesData = await specialtiesRes.json()
+        setSpecialties(specialtiesData.specialties)
+      }
+    } catch (error) {
+      console.error('Error fetching catalogs:', error)
+    } finally {
+      setLoadingCatalogs(false)
+    }
+  }
 
   const fetchPriests = async () => {
     try {
@@ -96,9 +124,9 @@ export function PriestsManagement() {
       lastName: '',
       email: '',
       password: '',
-      parish: '',
+      parishId: '',
       phone: '',
-      specialties: [],
+      specialtyIds: [],
       ordainedDate: '',
       biography: '',
       status: 'PENDING'
@@ -115,9 +143,9 @@ export function PriestsManagement() {
       lastName: priest.lastName,
       email: priest.user.email,
       password: '',
-      parish: priest.parish || '',
+      parishId: priest.parishId || '',
       phone: priest.phone || '',
-      specialties: parseSpecialties(priest.specialties),
+      specialtyIds: priest.specialties ? priest.specialties.map((s: any) => s.specialtyId) : [],
       ordainedDate: priest.ordainedDate ? priest.ordainedDate.split('T')[0] : '',
       biography: priest.biography || '',
       status: priest.status
@@ -158,7 +186,7 @@ export function PriestsManagement() {
       
       // Add all text fields
       Object.entries(formData).forEach(([key, value]) => {
-        if (key === 'specialties') {
+        if (key === 'specialtyIds') {
           submitData.append(key, JSON.stringify(value))
         } else {
           submitData.append(key, value as string)
@@ -205,12 +233,12 @@ export function PriestsManagement() {
     })
   }
 
-  const handleSpecialtyToggle = (specialty: string) => {
+  const handleSpecialtyToggle = (specialtyId: string) => {
     setFormData(prev => ({
       ...prev,
-      specialties: prev.specialties.includes(specialty)
-        ? prev.specialties.filter(s => s !== specialty)
-        : [...prev.specialties, specialty]
+      specialtyIds: prev.specialtyIds.includes(specialtyId)
+        ? prev.specialtyIds.filter(s => s !== specialtyId)
+        : [...prev.specialtyIds, specialtyId]
     }))
   }
 
@@ -334,9 +362,9 @@ export function PriestsManagement() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {priest.parish || 'No asignada'}
-                  </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {priest.parish?.name || 'No asignada'}
+                    </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       priest.status === 'APPROVED' 
@@ -455,13 +483,19 @@ export function PriestsManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Parroquia
                   </label>
-                  <input
-                    type="text"
-                    name="parish"
-                    value={formData.parish}
+                  <select
+                    name="parishId"
+                    value={formData.parishId}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  >
+                    <option value="">Seleccionar parroquia</option>
+                    {parishes.map(parish => (
+                      <option key={parish.id} value={parish.id}>
+                        {parish.name} - {parish.city.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -526,15 +560,15 @@ export function PriestsManagement() {
                   Especialidades
                 </label>
                 <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-3">
-                  {availableSpecialties.map(specialty => (
-                    <label key={specialty} className="flex items-center space-x-2">
+                  {specialties.map(specialty => (
+                    <label key={specialty.id} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        checked={formData.specialties.includes(specialty)}
-                        onChange={() => handleSpecialtyToggle(specialty)}
+                        checked={formData.specialtyIds.includes(specialty.id)}
+                        onChange={() => handleSpecialtyToggle(specialty.id)}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm text-gray-700">{specialty}</span>
+                      <span className="text-sm text-gray-700">{specialty.name}</span>
                     </label>
                   ))}
                 </div>

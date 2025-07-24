@@ -144,7 +144,7 @@ export async function POST(request: Request) {
         userId: user.id,
         firstName,
         lastName,
-        parishId: parish || null,
+        parish: parish ? { connect: { id: parish } } : undefined,
         phone: phone || null,
         specialties: specialties || null,
         ordainedDate: ordainedDate ? new Date(ordainedDate) : null,

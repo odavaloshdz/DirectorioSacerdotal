@@ -225,7 +225,6 @@ export default function AdminPage() {
                 </button>
               </nav>
             </div>
-            </div>
           </div>
         </div>
 

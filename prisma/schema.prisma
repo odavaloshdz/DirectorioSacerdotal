@@ -6,24 +6,84 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = env("DATABASE_PROVIDER")
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  PRIEST
+  ADMIN
+}
+
+enum PriestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique
-  password      String?
   name          String?
-  role          Role      @default(USER)
+  email         String    @unique
   emailVerified DateTime?
+  password      String?
   image         String?
+  role          Role      @default(USER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   accounts Account[]
   sessions Session[]
   priest   Priest?
+
+  @@map("users")
 }
 
 model City {
@@ -103,47 +163,6 @@ model Priest {
   @@map("priests")
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-enum Role {
-  USER
-  PRIEST
-  ADMIN
-}
-
 model ProfileSuggestion {
   id          String                 @id @default(cuid())
   priestId    String
@@ -160,16 +179,4 @@ model ProfileSuggestion {
   priest Priest @relation(fields: [priestId], references: [id], onDelete: Cascade)
 
   @@map("profile_suggestions")
-}
-
-enum PriestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum SuggestionStatus {
-  PENDING
-  APPROVED
-  REJECTED
 }

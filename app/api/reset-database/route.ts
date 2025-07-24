@@ -14,6 +14,7 @@ export async function GET() {
     // Drop all tables and types (in reverse order of dependencies)
     try {
       await prisma.$executeRaw`DROP TABLE IF EXISTS "profileSuggestions" CASCADE;`
+      await prisma.$executeRaw`DROP TABLE IF EXISTS "priest_specialties" CASCADE;`
       await prisma.$executeRaw`DROP TABLE IF EXISTS "priestSpecialties" CASCADE;`
       await prisma.$executeRaw`DROP TABLE IF EXISTS "priests" CASCADE;`
       await prisma.$executeRaw`DROP TABLE IF EXISTS "parishes" CASCADE;`
@@ -130,6 +131,7 @@ export async function GET() {
       CREATE TABLE "specialties" (
         "id" TEXT NOT NULL,
         "name" TEXT NOT NULL,
+        "description" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "specialties_pkey" PRIMARY KEY ("id")
@@ -157,12 +159,12 @@ export async function GET() {
     `
     
     await prisma.$executeRaw`
-      CREATE TABLE "priestSpecialties" (
+      CREATE TABLE "priest_specialties" (
         "id" TEXT NOT NULL,
         "priestId" TEXT NOT NULL,
         "specialtyId" TEXT NOT NULL,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "priestSpecialties_pkey" PRIMARY KEY ("id")
+        CONSTRAINT "priest_specialties_pkey" PRIMARY KEY ("id")
       );
     `
     
@@ -191,8 +193,9 @@ export async function GET() {
     await prisma.$executeRaw`CREATE UNIQUE INDEX "verification_tokens_token_key" ON "verification_tokens"("token");`
     await prisma.$executeRaw`CREATE UNIQUE INDEX "verification_tokens_identifier_token_key" ON "verification_tokens"("identifier", "token");`
     await prisma.$executeRaw`CREATE UNIQUE INDEX "cities_name_key" ON "cities"("name");`
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "specialties_name_key" ON "specialties"("name");`
     await prisma.$executeRaw`CREATE UNIQUE INDEX "priests_userId_key" ON "priests"("userId");`
-    await prisma.$executeRaw`CREATE UNIQUE INDEX "priestSpecialties_priestId_specialtyId_key" ON "priestSpecialties"("priestId", "specialtyId");`
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "priest_specialties_priestId_specialtyId_key" ON "priest_specialties"("priestId", "specialtyId");`
     
     console.log('📋 Creando relaciones...')
     
@@ -202,8 +205,8 @@ export async function GET() {
     await prisma.$executeRaw`ALTER TABLE "parishes" ADD CONSTRAINT "parishes_cityId_fkey" FOREIGN KEY ("cityId") REFERENCES "cities"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
     await prisma.$executeRaw`ALTER TABLE "priests" ADD CONSTRAINT "priests_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
     await prisma.$executeRaw`ALTER TABLE "priests" ADD CONSTRAINT "priests_parishId_fkey" FOREIGN KEY ("parishId") REFERENCES "parishes"("id") ON DELETE SET NULL ON UPDATE CASCADE;`
-    await prisma.$executeRaw`ALTER TABLE "priestSpecialties" ADD CONSTRAINT "priestSpecialties_priestId_fkey" FOREIGN KEY ("priestId") REFERENCES "priests"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
-    await prisma.$executeRaw`ALTER TABLE "priestSpecialties" ADD CONSTRAINT "priestSpecialties_specialtyId_fkey" FOREIGN KEY ("specialtyId") REFERENCES "specialties"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
+    await prisma.$executeRaw`ALTER TABLE "priest_specialties" ADD CONSTRAINT "priest_specialties_priestId_fkey" FOREIGN KEY ("priestId") REFERENCES "priests"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
+    await prisma.$executeRaw`ALTER TABLE "priest_specialties" ADD CONSTRAINT "priest_specialties_specialtyId_fkey" FOREIGN KEY ("specialtyId") REFERENCES "specialties"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
     await prisma.$executeRaw`ALTER TABLE "profileSuggestions" ADD CONSTRAINT "profileSuggestions_priestId_fkey" FOREIGN KEY ("priestId") REFERENCES "priests"("id") ON DELETE CASCADE ON UPDATE CASCADE;`
     await prisma.$executeRaw`ALTER TABLE "profileSuggestions" ADD CONSTRAINT "profileSuggestions_reviewedBy_fkey" FOREIGN KEY ("reviewedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;`
     

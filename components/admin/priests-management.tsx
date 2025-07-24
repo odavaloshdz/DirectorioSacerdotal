@@ -143,7 +143,7 @@ export function PriestsManagement() {
       lastName: priest.lastName,
       email: priest.user.email,
       password: '',
-      parishId: priest.parishId || '',
+      parishId: priest.parish || '',
       phone: priest.phone || '',
       specialtyIds: priest.specialties ? priest.specialties.map((s: any) => s.specialtyId) : [],
       ordainedDate: priest.ordainedDate ? priest.ordainedDate.split('T')[0] : '',

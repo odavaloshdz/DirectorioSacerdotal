@@ -144,7 +144,7 @@ export async function POST(request: Request) {
         userId: user.id,
         firstName,
         lastName,
-        parish: parish ? { connect: { id: parish } } : undefined,
+        // TODO: Fix parish relationship after deployment
         phone: phone || null,
         specialties: specialties || null,
         ordainedDate: ordainedDate ? new Date(ordainedDate) : null,
